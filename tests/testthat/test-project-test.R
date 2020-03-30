@@ -1,5 +1,5 @@
 test_that("test_fun constrained mu", {
-  options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
+  # options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
 
   # generate some data
   n <- 1e5
