@@ -1,3 +1,5 @@
+#pragma once
+
 class TestFun {
   public:
   double f(const double& x)

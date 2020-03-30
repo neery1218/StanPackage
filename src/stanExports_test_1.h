@@ -33,7 +33,7 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_test_1");
-    reader.add_event(19, 17, "end", "model_test_1");
+    reader.add_event(20, 18, "end", "model_test_1");
     return reader;
 }
 template <typename T0__>
@@ -74,14 +74,14 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
         try {
             // initialize data block variables from context__
-            current_statement_begin__ = 6;
+            current_statement_begin__ = 7;
             context__.validate_dims("data initialization", "N", "int", context__.to_vec());
             N = int(0);
             vals_i__ = context__.vals_i("N");
             pos__ = 0;
             N = vals_i__[pos__++];
             check_greater_or_equal(function__, "N", N, 0);
-            current_statement_begin__ = 7;
+            current_statement_begin__ = 8;
             validate_non_negative_index("y", "N", N);
             context__.validate_dims("data initialization", "y", "vector_d", context__.to_vec(N));
             y = Eigen::Matrix<double, Eigen::Dynamic, 1>(N);
@@ -97,7 +97,7 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 11;
+            current_statement_begin__ = 12;
             num_params_r__ += 1;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -116,7 +116,7 @@ public:
         (void) pos__; // dummy call to supress warning
         std::vector<double> vals_r__;
         std::vector<int> vals_i__;
-        current_statement_begin__ = 11;
+        current_statement_begin__ = 12;
         if (!(context__.contains_r("mu")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable mu missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("mu");
@@ -154,7 +154,7 @@ public:
         try {
             stan::io::reader<local_scalar_t__> in__(params_r__, params_i__);
             // model parameters
-            current_statement_begin__ = 11;
+            current_statement_begin__ = 12;
             local_scalar_t__ mu;
             (void) mu;  // dummy to suppress unused var warning
             if (jacobian__)
@@ -162,9 +162,9 @@ public:
             else
                 mu = in__.scalar_lb_constrain(0);
             // model body
-            current_statement_begin__ = 15;
-            lp_accum__.add(uniform_log<propto__>(mu, 0, 100));
             current_statement_begin__ = 16;
+            lp_accum__.add(uniform_log<propto__>(mu, 0, 100));
+            current_statement_begin__ = 17;
             lp_accum__.add(normal_log<propto__>(y, test_fun(mu, pstream__), 1));
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());

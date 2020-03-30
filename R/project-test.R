@@ -20,15 +20,5 @@ logpost <- function(mu, y) {
 
 # log-posterior gradient
 logpost_grad <- function(mu, y) {
-  # TODO: This sum _should_ be negated, but the output matches stan...
   sum((y - test_fun(mu)) * (cos(mu) + 1))
 }
-
-# accessor functions for test cases
-sample_from_test_0 <- function(data, iter) {
-  sampling(stanmodels$test_0, data=data, iter = iter)
-}
-sample_from_test_1 <- function(data, iter) {
-  sampling(stanmodels$test_1, data=data, iter = iter)
-}
-

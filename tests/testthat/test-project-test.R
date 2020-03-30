@@ -1,5 +1,5 @@
-test_that("test_fun constrained mu", {
-  # options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
+test_that("test_fun 1 unconstrained mu point estimate", {
+  options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
 
   # generate some data
   n <- 1e5
@@ -9,13 +9,58 @@ test_that("test_fun constrained mu", {
   data = list(N = n, y = y)
 
   # sample from fit, get point estimate for mu
-  fit <- sample_from_test_1(data, 5e4)
+  fit <-  sampling(stanmodels$test_0, data=data, iter = 5e4)
   muhat <- mean(as.data.frame(fit)$mu)
 
-  # # FIXME: arbitrary tolerance for non-deterministic check...maybe remove this check?
-  expect_equal(muhat, mu, tolerance = 1e-2)
+  # non-deterministic check, maybe this test isn't necessary.
+  expect_equal(muhat, mu, tolerance = 1e-1)
+})
 
-  # check log-posterior ------------------------------------------
+test_that("test_fun 1 unconstrained mu log posterior", {
+  # sample from fit
+  fit <- sampling(stanmodels$test_0, data=data, iter = 1)
+
+  # generate values of the parameters in the model
+  nsim <- 18
+  Pars <- replicate(n = nsim,
+                    expr = {
+                      list(mu = runif(1, 0, 100))
+                    },
+                    simplify = FALSE)
+
+  # log posterior and gradient calculations in R
+  lpR <- sapply(1:nsim, function(ii) {
+    mu <- Pars[[ii]]$mu
+    logpost(mu, y = y)
+  })
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    mu <- Pars[[ii]]$mu
+    logpost_grad(mu, y = y)
+  })
+
+  # log posterior and gradient calculations in Stan
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    rstan::log_prob(object = fit,
+                    upars = upars,
+                    adjust_transform = FALSE)
+  })
+  lpStan_grad <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = TRUE)
+  })
+
+  # should return a vector of identical values.
+  lp_diff <- lpR - lpStan
+  expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)))
+
+  # gradients should be (almost) identical
+  expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
+})
+
+test_that("test_fun constrained mu", {
+  # sample from fit, get point estimate for mu
+  fit <-  sampling(stanmodels$test_1, data=data, iter = 1)
 
   # generate values of the parameters in the model
   nsim <- 18
@@ -30,7 +75,6 @@ test_that("test_fun constrained mu", {
     mu <- Pars[[ii]]$mu
     logpost(mu, y = y)
   })
-
   lpR_grad <- sapply(1:nsim, function(ii) {
     mu <- Pars[[ii]]$mu
     logpost_grad(mu, y = y)
@@ -66,4 +110,66 @@ test_that("test_fun constrained mu", {
 
   # gradients should be (almost) identical
   expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
+})
+
+
+test_that("test_fun_dist", {
+  options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
+
+  logpost <- function(mu, y) {
+    lprior <- dunif(mu, min = 0, max = 100, log = TRUE)
+    llikelihood <- dnorm(y, test_fun(mu), sd=1, log=TRUE)
+
+    lprior + llikelihood
+  }
+
+  logpost_grad_mu <- function(mu, y) {
+    (y - test_fun(mu)) * (cos(mu) + 1)
+  }
+  logpost_grad_y <- function(mu, y) {
+    -(y - test_fun(mu))
+  }
+
+  # sample from fit
+  fit <-  rstan::sampling(stanmodels$test_fun_dist, data=list(N=n), iter = 5e4)
+
+  nsim <- 18
+  Pars <- replicate(n = nsim,
+                    expr = {
+                      list(mu = runif(1, 0, 100), y = runif(1, 0, 100))
+                    },
+                    simplify = FALSE)
+
+  # log posterior and gradient calculations in R
+  lpR <- sapply(1:nsim, function(ii) {
+    mu <- Pars[[ii]]$mu
+    y <- Pars[[ii]]$y
+    logpost(mu, y)
+  })
+
+  # gradient wrt mu and y
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    mu <- Pars[[ii]]$mu
+    y <- Pars[[ii]]$y
+    c(logpost_grad_y(mu, y), logpost_grad_mu(mu,y))
+  })
+
+  # log posterior and gradient calculations in Stan
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    rstan::log_prob(object = fit,
+                    upars = upars,
+                    adjust_transform = TRUE)
+  })
+  lpStan_grad <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = TRUE)
+  })
+
+  # should return a vector of identical values.
+  lp_diff <- lpR - lpStan
+  testthat::expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)))
+
+  # gradients should be (almost) identical
+  testthat::expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
 })
