@@ -1,38 +1,29 @@
-class TestFun {
-  public:
-  double f(const double& x)
-  {
-    return sin(x) + x;
+#pragma once
+
+#include "test_fun.hpp"
+
+template <typename T0__>
+Eigen::Matrix<typename boost::math::tools::promote_args<T0__>::type, Eigen::Dynamic, 1>
+test_fun(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& x, std::ostream* pstream__) {
+  Eigen::Matrix<typename boost::math::tools::promote_args<T0__>::type, Eigen::Dynamic, 1> out(x.rows());
+  for (int i = 0; i < x.rows(); ++i) {
+    out(i, 1) = test_fun(x(i, 1), pstream__);
   }
 
-  double df(const double& x)
-  {
-    return cos(x) + 1;
-  }
-};
-
-TestFun inst;
-
-double test_fun(const double& x, std::ostream* pstream__)
-{
-  return inst.f(x);
-}
-
-var test_fun(const var& x, std::ostream* pstream__)
-{
-  double a = x.val();
-  double fa = sin(a) + a;
-  double dfa_da = inst.df(a);
-  return var(new precomp_v_vari(fa, x.vi_, dfa_da));
+  return out;
 }
 
 template <bool propto, typename T0__, typename T1__>
 typename boost::math::tools::promote_args<T0__, T1__>::type
-test_distr_lpdf(const T0__& y,
-    const T1__& mu, std::ostream* pstream__)
-{
-  using stan::math::square; // handles both doubles and vars
-  // y ~ normal(test_fun(mu), 1)
-  // log pdf is -1/2 * (y - test_fun(mu))^2
-  return -0.5 * square(y - test_fun(mu, pstream__));
+test_distr_lpdf(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& y,
+                    const Eigen::Matrix<T1__, Eigen::Dynamic, 1>& mu, std::ostream* pstream__){
+  if (y.rows() != mu.rows()) {
+    stringstream errmsg;
+    errmsg << "vector lengths of mu and y differ!";
+    throw std::domain_error(errmsg.str());
+  }
+  // covariance matrix is identity matrix
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> sigma = Eigen::MatrixXd::Identity(y.rows(), y.rows());
+
+  return stan::math::multi_normal_lpdf(y, test_fun(mu, pstream__), sigma);
 }
