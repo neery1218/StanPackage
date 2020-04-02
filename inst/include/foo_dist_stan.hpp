@@ -5,7 +5,6 @@
 #include <stan/math/rev/core.hpp>
 
 // plain function
-// NOTE: for some reason doesn't work with _lpdf!
 double foo_dist_lpdfi(const double& y, const double& mu,
 		     std::ostream* pstream__) {
   testproject::foo_dist fd;
@@ -44,5 +43,15 @@ stan::math::var foo_dist_lpdfi(const stan::math::var& y,
   double lp_dmu = fd.log_prob_dmu(y_, mu_);
   return stan::math::var(new precomp_vv_vari(lp, y.vi_, mu.vi_, lp_dy, lp_dmu));
 }
+
+// now stan prototype
+template <bool propto, typename T0__, typename T1__>
+typename boost::math::tools::promote_args<T0__, T1__>::type
+foo_dist_lpdf(const T0__& y,
+	      const T1__& mu,
+	      std::ostream* pstream__) {
+  return foo_dist_lpdfi(y, mu, pstream__);
+}
+
 
 #endif // testproject_foo_dist_stan_hpp

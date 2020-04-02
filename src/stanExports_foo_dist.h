@@ -33,13 +33,13 @@ static int current_statement_begin__;
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
     reader.add_event(0, 0, "start", "model_foo_dist");
-    reader.add_event(36, 34, "end", "model_foo_dist");
+    reader.add_event(30, 28, "end", "model_foo_dist");
     return reader;
 }
-template <typename T0__, typename T1__>
+template <bool propto, typename T0__, typename T1__>
 typename boost::math::tools::promote_args<T0__, T1__>::type
-foo_dist_lpdfi(const T0__& y,
-                   const T1__& mu, std::ostream* pstream__);
+foo_dist_lpdf(const T0__& y,
+                  const T1__& mu, std::ostream* pstream__);
 #include <stan_meta_header.hpp>
 class model_foo_dist : public prob_grad {
 private:
@@ -76,19 +76,19 @@ public:
         (void) DUMMY_VAR__;  // suppress unused var warning
         try {
             // initialize data block variables from context__
-            current_statement_begin__ = 10;
+            current_statement_begin__ = 7;
             context__.validate_dims("data initialization", "y_dat", "double", context__.to_vec());
             y_dat = double(0);
             vals_r__ = context__.vals_r("y_dat");
             pos__ = 0;
             y_dat = vals_r__[pos__++];
-            current_statement_begin__ = 11;
+            current_statement_begin__ = 8;
             context__.validate_dims("data initialization", "mu_dat", "double", context__.to_vec());
             mu_dat = double(0);
             vals_r__ = context__.vals_r("mu_dat");
             pos__ = 0;
             mu_dat = vals_r__[pos__++];
-            current_statement_begin__ = 12;
+            current_statement_begin__ = 9;
             context__.validate_dims("data initialization", "type", "int", context__.to_vec());
             type = int(0);
             vals_i__ = context__.vals_i("type");
@@ -102,9 +102,9 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 16;
+            current_statement_begin__ = 13;
             num_params_r__ += 1;
-            current_statement_begin__ = 17;
+            current_statement_begin__ = 14;
             num_params_r__ += 1;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -123,7 +123,7 @@ public:
         (void) pos__; // dummy call to supress warning
         std::vector<double> vals_r__;
         std::vector<int> vals_i__;
-        current_statement_begin__ = 16;
+        current_statement_begin__ = 13;
         if (!(context__.contains_r("y")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable y missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("y");
@@ -136,7 +136,7 @@ public:
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable y: ") + e.what()), current_statement_begin__, prog_reader__());
         }
-        current_statement_begin__ = 17;
+        current_statement_begin__ = 14;
         if (!(context__.contains_r("mu")))
             stan::lang::rethrow_located(std::runtime_error(std::string("Variable mu missing")), current_statement_begin__, prog_reader__());
         vals_r__ = context__.vals_r("mu");
@@ -174,14 +174,14 @@ public:
         try {
             stan::io::reader<local_scalar_t__> in__(params_r__, params_i__);
             // model parameters
-            current_statement_begin__ = 16;
+            current_statement_begin__ = 13;
             local_scalar_t__ y;
             (void) y;  // dummy to suppress unused var warning
             if (jacobian__)
                 y = in__.scalar_constrain(lp__);
             else
                 y = in__.scalar_constrain();
-            current_statement_begin__ = 17;
+            current_statement_begin__ = 14;
             local_scalar_t__ mu;
             (void) mu;  // dummy to suppress unused var warning
             if (jacobian__)
@@ -189,16 +189,16 @@ public:
             else
                 mu = in__.scalar_constrain();
             // model body
-            current_statement_begin__ = 21;
+            current_statement_begin__ = 18;
             if (as_bool(logical_eq(type, 1))) {
-                current_statement_begin__ = 24;
-                lp_accum__.add(foo_dist_lpdfi(y_dat, mu, pstream__));
+                current_statement_begin__ = 20;
+                lp_accum__.add(foo_dist_lpdf<propto__>(y_dat, mu, pstream__));
             } else if (as_bool(logical_eq(type, 2))) {
-                current_statement_begin__ = 28;
-                lp_accum__.add(foo_dist_lpdfi(y, mu_dat, pstream__));
+                current_statement_begin__ = 23;
+                lp_accum__.add(foo_dist_lpdf<propto__>(y, mu_dat, pstream__));
             } else if (as_bool(logical_eq(type, 3))) {
-                current_statement_begin__ = 32;
-                lp_accum__.add(foo_dist_lpdfi(y, mu, pstream__));
+                current_statement_begin__ = 26;
+                lp_accum__.add(foo_dist_lpdf<propto__>(y, mu, pstream__));
             }
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
