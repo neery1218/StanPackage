@@ -19,7 +19,7 @@
 
 test_that("test_fun unconstrained mu log posterior", {
   # generate some data
-  n <- 1e5
+  n <- 10
   mu <- runif(1, 0, 100)
   sigma <- 1
   y <- rnorm(n, test_fun(mu), sigma)
@@ -27,7 +27,8 @@ test_that("test_fun unconstrained mu log posterior", {
 
   # sample from fit
   # TODO: is there a way to not sample and still get a stanfit object?
-  fit <- sampling(stanmodels$test_0, data = data, iter = 1)
+  fit <- sampling(stanmodels$test_0, data = data,
+                  iter = 1, chains = 1, algorithm = "Fixed_param")
 
   # generate values of the parameters in the model
   nsim <- 18
@@ -71,14 +72,15 @@ test_that("test_fun constrained mu log posterior", {
   # test_1.stan has constrained mu to be positive
 
   # generate some data
-  n <- 1e5
+  n <- 10
   mu <- runif(1, 0, 100)
   sigma <- 1
   y <- rnorm(n, test_fun(mu), sigma)
   data = list(N = n, y = y)
 
   # sample from fit
-  fit <-  sampling(stanmodels$test_1, data = data, iter = 1)
+  fit <-  sampling(stanmodels$test_1, data = data,
+                   iter = 1, chains = 1, algorithm = "Fixed_param")
 
   # generate values of the parameters in the model
   nsim <- 18
@@ -119,7 +121,7 @@ test_that("test_fun constrained mu log posterior", {
     # note that d/d mu nu = 1/mu => d nu = (d mu) / mu (2)
     # substituting (2) into (1) gives d/d mu f(mu) = d/d nu f(exp(nu)) / mu
     # therefore, divide grad_log_prob by mu
-    rstan::grad_log_prob(fit, upars, adjust_transform = TRUE) / Pars[[ii]]$mu
+    rstan::grad_log_prob(fit, upars, adjust_transform = FALSE) / Pars[[ii]]$mu
   })
 
   # should return a vector of identical values.
@@ -151,10 +153,9 @@ test_that("test_fun_dist log posterior", {
   }
 
   # sample from fit
-  fit <-
-    rstan::sampling(stanmodels$test_fun_dist,
-                    data = list(N = 1),
-                    iter = 5e4)
+  fit <- rstan::sampling(stanmodels$test_fun_dist,
+                         data = list(N = 1),
+                         iter = 1, chains = 1, algorithm = "Fixed_param")
 
   nsim <- 18
   Pars <- replicate(n = nsim,
@@ -221,10 +222,9 @@ test_that("test_fun dist vectorized log posterior", {
   n <- 5 # dimension of vectors
 
   # sample from fit
-  fit <-
-    rstan::sampling(stanmodels$test_fun_dist_vector,
-                    data = list(N = n),
-                    iter = 1e4)
+  fit <- rstan::sampling(stanmodels$test_fun_dist_vector,
+                         data = list(N = n),
+                         iter = 1, chains = 1, algorithm = "Fixed_param")
 
   nsim <- 18
   Pars <- replicate(n = nsim,
