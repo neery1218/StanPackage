@@ -17,3 +17,7 @@ vignettes/.build.timestamp
 
 # osx
 *.DS_Store
+
+src/*.cc
+src/*.h
+src/*.o
