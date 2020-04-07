@@ -17,6 +17,6 @@ model {
   for (i in 1:N) {
     mu[i] ~ uniform(0, 100);
   }
-  y ~ test_distr_lpdf(mu);
+  y ~ test_distr(mu);
 }
 

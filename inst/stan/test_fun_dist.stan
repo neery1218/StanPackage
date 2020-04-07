@@ -14,6 +14,6 @@ parameters {
 
 model {
   mu ~ uniform(0, 100);
-  y ~ test_distr_lpdf(mu);
+  y ~ test_distr(mu);
 }
 
