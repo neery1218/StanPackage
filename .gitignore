@@ -1,1 +1,4 @@
 .Rproj.user
+src/*.cc
+     src/*.h
+     src/*.o
