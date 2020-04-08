@@ -2,7 +2,7 @@
 
 #include <stan/model/model_header.hpp>
 
-namespace model1c026eb6802e_test_fun_dist_vector_namespace {
+namespace model36ba77035433_test_normal_toeplitz_namespace {
 
 using std::istream;
 using std::string;
@@ -17,31 +17,82 @@ static int current_statement_begin__;
 
 stan::io::program_reader prog_reader__() {
     stan::io::program_reader reader;
-    reader.add_event(0, 0, "start", "model1c026eb6802e_test_fun_dist_vector");
-    reader.add_event(22, 20, "end", "model1c026eb6802e_test_fun_dist_vector");
+    reader.add_event(0, 0, "start", "model36ba77035433_test_normal_toeplitz");
+    reader.add_event(31, 29, "end", "model36ba77035433_test_normal_toeplitz");
     return reader;
 }
 
-template <typename T0__>
-Eigen::Matrix<typename boost::math::tools::promote_args<T0__>::type, Eigen::Dynamic, 1>
-test_fun(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& x, std::ostream* pstream__);
-
 template <bool propto, typename T0__, typename T1__>
 typename boost::math::tools::promote_args<T0__, T1__>::type
-test_distr_lpdf(const Eigen::Matrix<T0__, Eigen::Dynamic, 1>& y,
-                    const Eigen::Matrix<T1__, Eigen::Dynamic, 1>& mu, std::ostream* pstream__);
+normal_toeplitz_lpdf(const std::vector<T0__>& y,
+                         const std::vector<T1__>& acf, std::ostream* pstream__);
 
-class model1c026eb6802e_test_fun_dist_vector : public prob_grad {
+template <typename T1__, typename T2__, typename T3__>
+std::vector<typename boost::math::tools::promote_args<T1__, T2__, T3__>::type>
+psd_acf(const int& N,
+            const T1__& lambda,
+            const T2__& rho,
+            const T3__& sigma, std::ostream* pstream__) {
+    typedef typename boost::math::tools::promote_args<T1__, T2__, T3__>::type local_scalar_t__;
+    typedef local_scalar_t__ fun_return_scalar_t__;
+    const static bool propto__ = true;
+    (void) propto__;
+        local_scalar_t__ DUMMY_VAR__(std::numeric_limits<double>::quiet_NaN());
+        (void) DUMMY_VAR__;  // suppress unused var warning
+
+    int current_statement_begin__ = -1;
+    try {
+        {
+        current_statement_begin__ = 7;
+        validate_non_negative_index("acf_out", "N", N);
+        std::vector<local_scalar_t__  > acf_out(N, local_scalar_t__(DUMMY_VAR__));
+        stan::math::initialize(acf_out, DUMMY_VAR__);
+        stan::math::fill(acf_out, DUMMY_VAR__);
+
+
+        current_statement_begin__ = 8;
+        for (int i = 1; i <= N; ++i) {
+
+            current_statement_begin__ = 9;
+            stan::model::assign(acf_out, 
+                        stan::model::cons_list(stan::model::index_uni(i), stan::model::nil_index_list()), 
+                        (pow(sigma, 2) * stan::math::exp(-(pow(stan::math::fabs((i / lambda)), rho)))), 
+                        "assigning variable acf_out");
+        }
+        current_statement_begin__ = 11;
+        return stan::math::promote_scalar<fun_return_scalar_t__>(acf_out);
+        }
+    } catch (const std::exception& e) {
+        stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
+        // Next line prevents compiler griping about no return
+        throw std::runtime_error("*** IF YOU SEE THIS, PLEASE REPORT A BUG ***");
+    }
+}
+
+
+struct psd_acf_functor__ {
+    template <typename T1__, typename T2__, typename T3__>
+        std::vector<typename boost::math::tools::promote_args<T1__, T2__, T3__>::type>
+    operator()(const int& N,
+            const T1__& lambda,
+            const T2__& rho,
+            const T3__& sigma, std::ostream* pstream__) const {
+        return psd_acf(N, lambda, rho, sigma, pstream__);
+    }
+};
+
+class model36ba77035433_test_normal_toeplitz : public prob_grad {
 private:
         int N;
+        std::vector<double> y;
 public:
-    model1c026eb6802e_test_fun_dist_vector(stan::io::var_context& context__,
+    model36ba77035433_test_normal_toeplitz(stan::io::var_context& context__,
         std::ostream* pstream__ = 0)
         : prob_grad(0) {
         ctor_body(context__, 0, pstream__);
     }
 
-    model1c026eb6802e_test_fun_dist_vector(stan::io::var_context& context__,
+    model36ba77035433_test_normal_toeplitz(stan::io::var_context& context__,
         unsigned int random_seed__,
         std::ostream* pstream__ = 0)
         : prob_grad(0) {
@@ -59,7 +110,7 @@ public:
 
         current_statement_begin__ = -1;
 
-        static const char* function__ = "model1c026eb6802e_test_fun_dist_vector_namespace::model1c026eb6802e_test_fun_dist_vector";
+        static const char* function__ = "model36ba77035433_test_normal_toeplitz_namespace::model36ba77035433_test_normal_toeplitz";
         (void) function__;  // dummy to suppress unused var warning
         size_t pos__;
         (void) pos__;  // dummy to suppress unused var warning
@@ -70,13 +121,24 @@ public:
 
         try {
             // initialize data block variables from context__
-            current_statement_begin__ = 7;
+            current_statement_begin__ = 17;
             context__.validate_dims("data initialization", "N", "int", context__.to_vec());
             N = int(0);
             vals_i__ = context__.vals_i("N");
             pos__ = 0;
             N = vals_i__[pos__++];
             check_greater_or_equal(function__, "N", N, 0);
+
+            current_statement_begin__ = 18;
+            validate_non_negative_index("y", "N", N);
+            context__.validate_dims("data initialization", "y", "double", context__.to_vec(N));
+            y = std::vector<double>(N, double(0));
+            vals_r__ = context__.vals_r("y");
+            pos__ = 0;
+            size_t y_k_0_max__ = N;
+            for (size_t k_0__ = 0; k_0__ < y_k_0_max__; ++k_0__) {
+                y[k_0__] = vals_r__[pos__++];
+            }
 
 
             // initialize transformed data variables
@@ -87,12 +149,12 @@ public:
             // validate, set parameter ranges
             num_params_r__ = 0U;
             param_ranges_i__.clear();
-            current_statement_begin__ = 11;
-            validate_non_negative_index("y", "N", N);
-            num_params_r__ += N;
-            current_statement_begin__ = 12;
-            validate_non_negative_index("mu", "N", N);
-            num_params_r__ += N;
+            current_statement_begin__ = 22;
+            num_params_r__ += 1;
+            current_statement_begin__ = 23;
+            num_params_r__ += 1;
+            current_statement_begin__ = 24;
+            num_params_r__ += 1;
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
             // Next line prevents compiler griping about no return
@@ -100,7 +162,7 @@ public:
         }
     }
 
-    ~model1c026eb6802e_test_fun_dist_vector() { }
+    ~model36ba77035433_test_normal_toeplitz() { }
 
 
     void transform_inits(const stan::io::var_context& context__,
@@ -114,40 +176,46 @@ public:
         std::vector<double> vals_r__;
         std::vector<int> vals_i__;
 
-        current_statement_begin__ = 11;
-        if (!(context__.contains_r("y")))
-            stan::lang::rethrow_located(std::runtime_error(std::string("Variable y missing")), current_statement_begin__, prog_reader__());
-        vals_r__ = context__.vals_r("y");
+        current_statement_begin__ = 22;
+        if (!(context__.contains_r("lambda")))
+            stan::lang::rethrow_located(std::runtime_error(std::string("Variable lambda missing")), current_statement_begin__, prog_reader__());
+        vals_r__ = context__.vals_r("lambda");
         pos__ = 0U;
-        validate_non_negative_index("y", "N", N);
-        context__.validate_dims("parameter initialization", "y", "vector_d", context__.to_vec(N));
-        Eigen::Matrix<double, Eigen::Dynamic, 1> y(N);
-        size_t y_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < y_j_1_max__; ++j_1__) {
-            y(j_1__) = vals_r__[pos__++];
-        }
+        context__.validate_dims("parameter initialization", "lambda", "double", context__.to_vec());
+        double lambda(0);
+        lambda = vals_r__[pos__++];
         try {
-            writer__.vector_unconstrain(y);
+            writer__.scalar_lb_unconstrain(0, lambda);
         } catch (const std::exception& e) {
-            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable y: ") + e.what()), current_statement_begin__, prog_reader__());
+            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable lambda: ") + e.what()), current_statement_begin__, prog_reader__());
         }
 
-        current_statement_begin__ = 12;
-        if (!(context__.contains_r("mu")))
-            stan::lang::rethrow_located(std::runtime_error(std::string("Variable mu missing")), current_statement_begin__, prog_reader__());
-        vals_r__ = context__.vals_r("mu");
+        current_statement_begin__ = 23;
+        if (!(context__.contains_r("rho")))
+            stan::lang::rethrow_located(std::runtime_error(std::string("Variable rho missing")), current_statement_begin__, prog_reader__());
+        vals_r__ = context__.vals_r("rho");
         pos__ = 0U;
-        validate_non_negative_index("mu", "N", N);
-        context__.validate_dims("parameter initialization", "mu", "vector_d", context__.to_vec(N));
-        Eigen::Matrix<double, Eigen::Dynamic, 1> mu(N);
-        size_t mu_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < mu_j_1_max__; ++j_1__) {
-            mu(j_1__) = vals_r__[pos__++];
-        }
+        context__.validate_dims("parameter initialization", "rho", "double", context__.to_vec());
+        double rho(0);
+        rho = vals_r__[pos__++];
         try {
-            writer__.vector_unconstrain(mu);
+            writer__.scalar_lb_unconstrain(0, rho);
         } catch (const std::exception& e) {
-            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable mu: ") + e.what()), current_statement_begin__, prog_reader__());
+            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable rho: ") + e.what()), current_statement_begin__, prog_reader__());
+        }
+
+        current_statement_begin__ = 24;
+        if (!(context__.contains_r("sigma")))
+            stan::lang::rethrow_located(std::runtime_error(std::string("Variable sigma missing")), current_statement_begin__, prog_reader__());
+        vals_r__ = context__.vals_r("sigma");
+        pos__ = 0U;
+        context__.validate_dims("parameter initialization", "sigma", "double", context__.to_vec());
+        double sigma(0);
+        sigma = vals_r__[pos__++];
+        try {
+            writer__.scalar_lb_unconstrain(0, sigma);
+        } catch (const std::exception& e) {
+            stan::lang::rethrow_located(std::runtime_error(std::string("Error transforming variable sigma: ") + e.what()), current_statement_begin__, prog_reader__());
         }
 
         params_r__ = writer__.data_r();
@@ -182,32 +250,34 @@ public:
             stan::io::reader<local_scalar_t__> in__(params_r__, params_i__);
 
             // model parameters
-            current_statement_begin__ = 11;
-            Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, 1> y;
-            (void) y;  // dummy to suppress unused var warning
+            current_statement_begin__ = 22;
+            local_scalar_t__ lambda;
+            (void) lambda;  // dummy to suppress unused var warning
             if (jacobian__)
-                y = in__.vector_constrain(N, lp__);
+                lambda = in__.scalar_lb_constrain(0, lp__);
             else
-                y = in__.vector_constrain(N);
+                lambda = in__.scalar_lb_constrain(0);
 
-            current_statement_begin__ = 12;
-            Eigen::Matrix<local_scalar_t__, Eigen::Dynamic, 1> mu;
-            (void) mu;  // dummy to suppress unused var warning
+            current_statement_begin__ = 23;
+            local_scalar_t__ rho;
+            (void) rho;  // dummy to suppress unused var warning
             if (jacobian__)
-                mu = in__.vector_constrain(N, lp__);
+                rho = in__.scalar_lb_constrain(0, lp__);
             else
-                mu = in__.vector_constrain(N);
+                rho = in__.scalar_lb_constrain(0);
+
+            current_statement_begin__ = 24;
+            local_scalar_t__ sigma;
+            (void) sigma;  // dummy to suppress unused var warning
+            if (jacobian__)
+                sigma = in__.scalar_lb_constrain(0, lp__);
+            else
+                sigma = in__.scalar_lb_constrain(0);
 
             // model body
 
-            current_statement_begin__ = 16;
-            for (int i = 1; i <= N; ++i) {
-
-                current_statement_begin__ = 17;
-                lp_accum__.add(uniform_log<propto__>(get_base1(mu, i, "mu", 1), 0, 100));
-            }
-            current_statement_begin__ = 19;
-            lp_accum__.add(test_distr_lpdf<propto__>(y, mu, pstream__));
+            current_statement_begin__ = 28;
+            lp_accum__.add(normal_toeplitz_lpdf<propto__>(y, psd_acf(N, lambda, rho, sigma, pstream__), pstream__));
 
         } catch (const std::exception& e) {
             stan::lang::rethrow_located(e, current_statement_begin__, prog_reader__());
@@ -234,8 +304,9 @@ public:
 
     void get_param_names(std::vector<std::string>& names__) const {
         names__.resize(0);
-        names__.push_back("y");
-        names__.push_back("mu");
+        names__.push_back("lambda");
+        names__.push_back("rho");
+        names__.push_back("sigma");
     }
 
 
@@ -243,10 +314,10 @@ public:
         dimss__.resize(0);
         std::vector<size_t> dims__;
         dims__.resize(0);
-        dims__.push_back(N);
         dimss__.push_back(dims__);
         dims__.resize(0);
-        dims__.push_back(N);
+        dimss__.push_back(dims__);
+        dims__.resize(0);
         dimss__.push_back(dims__);
     }
 
@@ -262,21 +333,18 @@ public:
 
         vars__.resize(0);
         stan::io::reader<local_scalar_t__> in__(params_r__, params_i__);
-        static const char* function__ = "model1c026eb6802e_test_fun_dist_vector_namespace::write_array";
+        static const char* function__ = "model36ba77035433_test_normal_toeplitz_namespace::write_array";
         (void) function__;  // dummy to suppress unused var warning
 
         // read-transform, write parameters
-        Eigen::Matrix<double, Eigen::Dynamic, 1> y = in__.vector_constrain(N);
-        size_t y_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < y_j_1_max__; ++j_1__) {
-            vars__.push_back(y(j_1__));
-        }
+        double lambda = in__.scalar_lb_constrain(0);
+        vars__.push_back(lambda);
 
-        Eigen::Matrix<double, Eigen::Dynamic, 1> mu = in__.vector_constrain(N);
-        size_t mu_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < mu_j_1_max__; ++j_1__) {
-            vars__.push_back(mu(j_1__));
-        }
+        double rho = in__.scalar_lb_constrain(0);
+        vars__.push_back(rho);
+
+        double sigma = in__.scalar_lb_constrain(0);
+        vars__.push_back(sigma);
 
         double lp__ = 0.0;
         (void) lp__;  // dummy to suppress unused var warning
@@ -316,7 +384,7 @@ public:
     }
 
     static std::string model_name() {
-        return "model1c026eb6802e_test_fun_dist_vector";
+        return "model36ba77035433_test_normal_toeplitz";
     }
 
 
@@ -324,18 +392,15 @@ public:
                                  bool include_tparams__ = true,
                                  bool include_gqs__ = true) const {
         std::stringstream param_name_stream__;
-        size_t y_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < y_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "y" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
-        size_t mu_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < mu_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "mu" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "lambda";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "rho";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma";
+        param_names__.push_back(param_name_stream__.str());
 
         if (!include_gqs__ && !include_tparams__) return;
 
@@ -350,18 +415,15 @@ public:
                                    bool include_tparams__ = true,
                                    bool include_gqs__ = true) const {
         std::stringstream param_name_stream__;
-        size_t y_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < y_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "y" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
-        size_t mu_j_1_max__ = N;
-        for (size_t j_1__ = 0; j_1__ < mu_j_1_max__; ++j_1__) {
-            param_name_stream__.str(std::string());
-            param_name_stream__ << "mu" << '.' << j_1__ + 1;
-            param_names__.push_back(param_name_stream__.str());
-        }
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "lambda";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "rho";
+        param_names__.push_back(param_name_stream__.str());
+        param_name_stream__.str(std::string());
+        param_name_stream__ << "sigma";
+        param_names__.push_back(param_name_stream__.str());
 
         if (!include_gqs__ && !include_tparams__) return;
 
@@ -375,6 +437,6 @@ public:
 
 }  // namespace
 
-typedef model1c026eb6802e_test_fun_dist_vector_namespace::model1c026eb6802e_test_fun_dist_vector stan_model;
+typedef model36ba77035433_test_normal_toeplitz_namespace::model36ba77035433_test_normal_toeplitz stan_model;
 
 
