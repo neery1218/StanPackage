@@ -1,8 +1,12 @@
 #pragma once
 
+//[[Rcpp::depends("SuperGauss")]]
 #include "NormalToeplitz.h"
 #include <vector>
 
+/*
+// mlysy: you can't use a global variable for this.
+// what if the user want to have two different NormalToeplitz distributions?
 NormalToeplitz* solver = nullptr;
 
 NormalToeplitz* get_solver(int N)
@@ -13,15 +17,17 @@ NormalToeplitz* get_solver(int N)
   }
   return solver;
 }
+*/
 
 // log density
 double normal_toeplitz_lpdfi(const std::vector<double>& y,
     const std::vector<double>& acf, std::ostream* pstream__)
 {
   int N = y.size();
-  NormalToeplitz* solver = get_solver(N);
+  // NormalToeplitz* solver = get_solver(N);
+  NormalToeplitz solver(N);
 
-  double lp = solver->logdens(y.data(), acf.data());
+  double lp = solver.logdens(y.data(), acf.data());
   return lp;
 }
 
@@ -30,52 +36,57 @@ stan::math::var normal_toeplitz_lpdfi(const std::vector<stan::math::var>& y,
     const std::vector<double>& acf, std::ostream* pstream__)
 {
   int N = y.size();
-  NormalToeplitz* solver = get_solver(N);
+  // NormalToeplitz* solver = get_solver(N);
+  NormalToeplitz solver(N);
 
   std::vector<double> y_ = value_of(y);
-  double lp = solver->logdens(y_.data(), acf.data());
+  double lp = solver.logdens(y_.data(), acf.data());
 
-  vector<double> dldy(N, 0.0);
+  std::vector<double> dldy(N, 0.0);
 
   // TODO: if there's ever a segfault, look here.
-  solver->grad_full(dldy.data(), nullptr, y_.data(), acf.data(), true, false);
+  solver.grad_full(dldy.data(), nullptr, y_.data(), acf.data(), true, false);
   return precomputed_gradients(lp, y, dldy);
 }
 
 // gradient wrt acf
 stan::math::var normal_toeplitz_lpdfi(const std::vector<double>& y,
-    const std::vector<stan::math::var>& acf, std::ostream* pstream__)
-{
+				      const std::vector<stan::math::var>& acf,
+				      std::ostream* pstream__) {
   int N = y.size();
-  NormalToeplitz* solver = get_solver(N);
+  // NormalToeplitz* solver = get_solver(N);
+  NormalToeplitz solver(N);
 
   std::vector<double> acf_ = value_of(acf);
-  double lp = solver->logdens(y.data(), acf_.data());
+  double lp = solver.logdens(y.data(), acf_.data());
 
-  vector<double> dlda(N, 0.0);
+  std::vector<double> dlda(N, 0.0);
 
-  // TODO: if there's ever a segfault, look here.
-  solver->grad_full(nullptr, dlda.data(), y.data(), acf_.data(), false, true);
+  solver.grad_full(nullptr, dlda.data(), y.data(), acf_.data(), false, true);
   return precomputed_gradients(lp, acf, dlda);
 }
 
 // gradient wrt y and acf
 stan::math::var normal_toeplitz_lpdfi(const std::vector<stan::math::var>& y,
-    const std::vector<stan::math::var>& acf, std::ostream* pstream__)
-{
+				      const std::vector<stan::math::var>& acf,
+				      std::ostream* pstream__) {
   int N = y.size();
-  NormalToeplitz* solver = get_solver(N);
+  // NormalToeplitz* solver = get_solver(N);
+  NormalToeplitz solver(N);
 
   std::vector<double> y_ = value_of(y);
   std::vector<double> acf_ = value_of(acf);
 
-  double lp = solver->logdens(y_.data(), acf_.data());
+  double lp = solver.logdens(y_.data(), acf_.data());
 
-  vector<double> dldy(N, 0.0);
-  vector<double> dlda(N, 0.0);
+  // vector<double> dldy(N, 0.0);
+  // vector<double> dlda(N, 0.0);
+  std::vector<stan::math::var> combined;
+  vector<double> combined_gradients(2*N, 0.0);
 
-  // TODO: if there's ever a segfault, look here.
-  solver->grad_full(dldy.data(), dlda.data(), y_.data(), acf_.data(), true, true);
+  solver.grad_full(combined_gradients.data(),
+		   combined_gradients.data()+N,
+		   y_.data(), acf_.data(), true, true);
 
   /*
    * From the "Adding a new function with known gradients page." 
@@ -84,17 +95,20 @@ stan::math::var normal_toeplitz_lpdfi(const std::vector<stan::math::var>& y,
    * all the var arguments into one vector and their matching
    * gradients into another. */
   // TODO: this seems fishy.
+  // mlysy: seems theres a better way with `operands_and_partials`, but we can figure this out later.
 
-  std::vector<stan::math::var> combined;
-  std::vector<double> combined_gradients;
-  for (int i = 0; i < N; ++i) {
-    combined.push_back(y[i]);
-    combined_gradients.push_back(dldy[i]);
-  }
-  for (int i = 0; i < N; ++i) {
-    combined.push_back(acf[i]);
-    combined_gradients.push_back(dlda[i]);
-  }
+  combined.insert(combined.end(), y.begin(), y.end());
+  combined.insert(combined.end(), acf.begin(), acf.end());
+  // std::vector<stan::math::var> combined;
+  // std::vector<double> combined_gradients;
+  // for (int i = 0; i < N; ++i) {
+  //   combined.push_back(y[i]);
+  //   combined_gradients.push_back(dldy[i]);
+  // }
+  // for (int i = 0; i < N; ++i) {
+  //   combined.push_back(acf[i]);
+  //   combined_gradients.push_back(dlda[i]);
+  // }
   return precomputed_gradients(lp, combined, combined_gradients);
 }
 

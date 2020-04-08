@@ -16,15 +16,14 @@ Depends:
 Imports: 
     methods,
     Rcpp (>= 0.12.0),
-    rstan (>= 2.18.1),
-    rstantools (>= 2.0.0)
+    rstan (>= 2.18.1)
 LinkingTo: 
     BH (>= 1.66.0),
     Rcpp (>= 0.12.0),
     RcppEigen (>= 0.3.3.3.0),
     rstan (>= 2.18.1),
-    StanHeaders (>= 2.18.0)
+    StanHeaders (>= 2.18.0),
+    SuperGauss (>= 1.0.2)
 SystemRequirements: GNU make
 Suggests: 
     testthat (>= 2.1.0)
-Biarch: true
