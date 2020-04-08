@@ -450,7 +450,7 @@ inline double Toeplitz::trace_grad(const double* acf0)
     if (!has_solve_)
       solve_setup();
     // check first term to avoid singularity
-    bool sng = fabs(acf0[0] < 0.0001);
+    int sng = std::fabs(acf0[0] < 0.0001);
     if (sng)
       acf00 += 1.0;
     std::copy(acf0, acf0 + N_, U1_);
@@ -513,7 +513,7 @@ inline double Toeplitz::trace_hess(const double* acf1, const double* acf2)
     if (!has_solve_)
       solve_setup();
     // check first term to avoid singularity
-    bool sng = fabs(acf2[0] < 0.0001);
+    int sng = std::fabs(acf2[0] < 0.0001);
     if (sng)
       acf20 += 1.0;
     // Store the negative derivative of delta in vector phi_, where phi_ = solve(acf_) * toep(acf1) * delta
