@@ -1,3 +1,6 @@
+require(rstan)
+require(numDeriv)
+
 # commented out because the test takes a long time.
 # test_that("test_fun unconstrained mu point estimate", {
 #   options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?
@@ -77,8 +80,7 @@ test_that("test_fun constrained mu log posterior", {
   sigma <- 1
   y <- rnorm(n, test_fun(mu), sigma)
   data = list(N = n, y = y)
-
-  # sample from fit
+   # sample from fit
   fit <-  sampling(stanmodels$test_1, data = data,
                    iter = 1, chains = 1, algorithm = "Fixed_param")
 
@@ -264,4 +266,130 @@ test_that("test_fun dist vectorized log posterior", {
 
   # gradients should be (almost) identical
   testthat::expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
+})
+
+test_that("test_fun foo_dist all gradients", {
+  foo_dist <- function(y, mu) {
+    dnorm(y, sin(mu) + mu, sd = 1, log = TRUE)
+  }
+
+  y_dat <- rnorm(1)
+  mu_dat <- rnorm(1)
+
+  #--- gradient wrt mu -----------------------------------------------------------
+
+  fit <- sampling(stanmodels$foo_dist,
+                  data = list(y_dat = y_dat, mu_dat = mu_dat, type = 1),
+                  iter = 1, chains = 1, algorithm = "Fixed_param")
+
+
+  nsim <- 20
+  Pars <- replicate(n = nsim, expr = {
+    list(y = rnorm(1), mu = rnorm(1))
+  }, simplify = FALSE)
+
+  # R calcs
+  lpR <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    foo_dist(y_dat, mu)
+  })
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    grad(function(mu_) foo_dist(y_dat, mu_), x = mu)[1]
+  })
+
+  # Stan calcs
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    log_prob(object = fit,
+             upars = upars,
+             adjust_transform = FALSE)
+  })
+  lpStan_grad <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)[2]
+  })
+
+  lpR - lpStan
+  lpR_grad - lpStan_grad
+
+  #--- gradient wrt y -----------------------------------------------------------
+
+  fit <- sampling(stanmodels$foo_dist,
+                  data = list(y_dat = y_dat, mu_dat = mu_dat, type = 2),
+                  iter = 1, chains = 1, algorithm = "Fixed_param")
+
+
+  nsim <- 20
+  Pars <- replicate(n = nsim, expr = {
+    list(y = rnorm(1), mu = rnorm(1))
+  }, simplify = FALSE)
+
+  # R calcs
+  lpR <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    foo_dist(y, mu_dat)
+  })
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    grad(function(y_) foo_dist(y_, mu_dat), x = y)[1]
+  })
+
+  # Stan calcs
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    log_prob(object = fit,
+             upars = upars,
+             adjust_transform = FALSE)
+  })
+  lpStan_grad <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)[1]
+  })
+
+  lpR - lpStan
+  lpR_grad - lpStan_grad
+
+  #--- gradient wrt y and mu -----------------------------------------------------
+
+  fit <- sampling(stanmodels$foo_dist,
+                  data = list(y_dat = y_dat, mu_dat = mu_dat, type = 3),
+                  iter = 1, chains = 1, algorithm = "Fixed_param")
+
+
+  nsim <- 20
+  Pars <- replicate(n = nsim, expr = {
+    list(y = rnorm(1), mu = rnorm(1))
+  }, simplify = FALSE)
+
+  # R calcs
+  lpR <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    foo_dist(y, mu)
+  })
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    mu <- Pars[[ii]]$mu
+    grad(function(x) foo_dist(x[1], x[2]), x = c(y, mu))
+  })
+
+  # Stan calcs
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    rstan::log_prob(object = fit,
+             upars = upars,
+             adjust_transform = FALSE)
+  })
+  lpStan_grad <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)
+  })
+
+  expect_equal(lpR, lpStan)
+  expect_equal(lpR_grad, lpStan_grad)
 })

@@ -3,7 +3,6 @@
 require(testproject1)
 require(rstan)
 require(numDeriv)
-
 foo_dist <- function(y, mu) {
   dnorm(y, sin(mu) + mu, sd = 1, log = TRUE)
 }
