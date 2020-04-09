@@ -6,7 +6,7 @@ functions {
   real[] psd_acf(int N, real lambda, real rho, real sigma) {
     real acf_out[N];
     for (i in 1:N) {
-      acf_out[i] = sigma^2 * exp(-fabs(i/lambda)^rho);
+      acf_out[i] = sigma^2 * exp(-fabs(i/lambda)^1);
     }
     return acf_out;
   }
@@ -20,11 +20,13 @@ data {
 
 parameters {
   real<lower=0> lambda;
-  real<lower=0> rho;
   real<lower=0> sigma;
 }
 
 model {
-  y ~ normal_toeplitz(psd_acf(N, lambda, rho, sigma));
+  lambda ~ uniform(0,100);
+  sigma ~ uniform(0, 1);
+
+  y ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
 }
 
