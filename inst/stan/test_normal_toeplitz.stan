@@ -15,18 +15,35 @@ functions {
 
 data {
   int<lower=0> N;
-  real y[N];
+
+  real y_dat[N];
+
+  real<lower=0> lambda_dat;
+  real<lower=0> sigma_dat;
+
+  int<lower=1,upper=3> type;
 }
 
 parameters {
+  real y[N];
+
   real<lower=0> lambda;
   real<lower=0> sigma;
 }
 
 model {
+  // priors
   lambda ~ uniform(0,100);
   sigma ~ uniform(0, 1);
 
-  y ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
+  if(type == 1) {
+    // gradient wrt lambda, sigma
+    y_dat ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
+  } else if(type == 2) {
+    // gradient wrt y
+    y ~ normal_toeplitz(psd_acf(N, lambda_dat, 1, sigma_dat));
+  } else if(type == 3) {
+    // gradient wrt y and lambda,sigma
+    y ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
+  }
 }
-
