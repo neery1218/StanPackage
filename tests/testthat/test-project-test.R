@@ -395,7 +395,6 @@ test_that("test_fun foo_dist all gradients", {
   expect_equal(lpR_grad, lpStan_grad)
 })
 
-# TODO: add params wrt y, y AND params
 # TODO: once a mean parameter is added, add those gradients too
 test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
   # generate data

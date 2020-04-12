@@ -2,114 +2,70 @@
 
 //[[Rcpp::depends("SuperGauss")]]
 #include "NormalToeplitz.h"
+#include <iostream>
 #include <vector>
 
-/*
-// mlysy: you can't use a global variable for this.
-// what if the user want to have two different NormalToeplitz distributions?
-NormalToeplitz* solver = nullptr;
-
-NormalToeplitz* get_solver(int N)
+template <typename Ty__, typename Tacf__>
+stan::math::var normal_toeplitz_lpdfi(const std::vector<Ty__>& y,
+    const std::vector<Tacf__>& acf, std::ostream* pstream__)
 {
-  // I have no idea if stan's math library is threaded. If it is, this will fail. From some basic googling, it appears that stan will _eventually_ be threaded.
-  if (!solver) {
-    solver = new NormalToeplitz(N);
-  }
-  return solver;
-}
-*/
+  using stan::math::operands_and_partials;
+  using stan::math::var;
 
-// log density
-double normal_toeplitz_lpdfi(const std::vector<double>& y,
-    const std::vector<double>& acf, std::ostream* pstream__)
-{
+  std::vector<var> y_var = to_var(y);
+  std::vector<var> acf_var = to_var(acf);
+
+  operands_and_partials<std::vector<var>, std::vector<var>> o(y_var, acf_var);
+
   int N = y.size();
-  // NormalToeplitz* solver = get_solver(N);
-  NormalToeplitz solver(N);
-
-  double lp = solver.logdens(y.data(), acf.data());
-  return lp;
-}
-
-// gradient wrt y
-stan::math::var normal_toeplitz_lpdfi(const std::vector<stan::math::var>& y,
-    const std::vector<double>& acf, std::ostream* pstream__)
-{
-  int N = y.size();
-  // NormalToeplitz* solver = get_solver(N);
-  NormalToeplitz solver(N);
-
-  std::vector<double> y_ = value_of(y);
-  double lp = solver.logdens(y_.data(), acf.data());
-
-  std::vector<double> dldy(N, 0.0);
-
-  // TODO: if there's ever a segfault, look here.
-  solver.grad_full(dldy.data(), nullptr, y_.data(), acf.data(), true, false);
-  return precomputed_gradients(lp, y, dldy);
-}
-
-// gradient wrt acf
-stan::math::var normal_toeplitz_lpdfi(const std::vector<double>& y,
-				      const std::vector<stan::math::var>& acf,
-				      std::ostream* pstream__) {
-  int N = y.size();
-  // NormalToeplitz* solver = get_solver(N);
-  NormalToeplitz solver(N);
-
-  std::vector<double> acf_ = value_of(acf);
-  double lp = solver.logdens(y.data(), acf_.data());
-
-  std::vector<double> dlda(N, 0.0);
-
-  solver.grad_full(nullptr, dlda.data(), y.data(), acf_.data(), false, true);
-  return precomputed_gradients(lp, acf, dlda);
-}
-
-// gradient wrt y and acf
-stan::math::var normal_toeplitz_lpdfi(const std::vector<stan::math::var>& y,
-				      const std::vector<stan::math::var>& acf,
-				      std::ostream* pstream__) {
-  int N = y.size();
-  // NormalToeplitz* solver = get_solver(N);
-  NormalToeplitz solver(N);
 
   std::vector<double> y_ = value_of(y);
   std::vector<double> acf_ = value_of(acf);
 
+  // solve for log-posterior
+  NormalToeplitz solver(N);
   double lp = solver.logdens(y_.data(), acf_.data());
 
-  // vector<double> dldy(N, 0.0);
-  // vector<double> dlda(N, 0.0);
-  std::vector<stan::math::var> combined;
-  vector<double> combined_gradients(2*N, 0.0);
+  // get gradients
+  vector<double> dldy(N, 0.0);
+  vector<double> dldacf(N, 0.0);
 
-  solver.grad_full(combined_gradients.data(),
-		   combined_gradients.data()+N,
-		   y_.data(), acf_.data(), true, true);
+  solver.grad_full(dldy.data(),
+      dldacf.data(),
+      y_.data(), acf_.data(), true, true);
 
-  /*
-   * From the "Adding a new function with known gradients page." 
-   * The precomputed_gradients class can be used to deal with
-   * any form of inputs and outputs.All you need to do is pack
-   * all the var arguments into one vector and their matching
-   * gradients into another. */
-  // TODO: this seems fishy.
-  // mlysy: seems theres a better way with `operands_and_partials`, but we can figure this out later.
+  // stuff into Eigen vectors
+  Eigen::VectorXd dldy_eigen(N);
+  Eigen::VectorXd dldacf_eigen(N);
 
-  combined.insert(combined.end(), y.begin(), y.end());
-  combined.insert(combined.end(), acf.begin(), acf.end());
-  // std::vector<stan::math::var> combined;
-  // std::vector<double> combined_gradients;
-  // for (int i = 0; i < N; ++i) {
-  //   combined.push_back(y[i]);
-  //   combined_gradients.push_back(dldy[i]);
-  // }
-  // for (int i = 0; i < N; ++i) {
-  //   combined.push_back(acf[i]);
-  //   combined_gradients.push_back(dlda[i]);
-  // }
-  return precomputed_gradients(lp, combined, combined_gradients);
+  for (int i = 0; i < dldy.size(); ++i) {
+    dldy_eigen(i) = dldy[i];
+    dldacf_eigen(i) = dldacf[i];
+  }
+
+  // set partials
+  o.edge1_.partials_vec_[0] += dldy_eigen;
+  o.edge2_.partials_vec_[0] += dldacf_eigen;
+
+  // build variable
+  return o.build(lp);
+}
+
+// TODO: find the correct cast function from stan/math
+template <class T>
+T cast(stan::math::var v);
+
+template <>
+stan::math::var cast(stan::math::var v)
+{
+  return v;
+}
+
+template <>
+double cast(stan::math::var v)
+{
+  double val = v.val();
+  return val;
 }
 
 template <bool propto, typename T0__, typename T1__>
@@ -117,5 +73,6 @@ typename boost::math::tools::promote_args<T0__, T1__>::type
 normal_toeplitz_lpdf(const std::vector<T0__>& y,
     const std::vector<T1__>& acf, std::ostream* pstream__)
 {
-  return normal_toeplitz_lpdfi(y, acf, pstream__);
+  stan::math::var v = normal_toeplitz_lpdfi(y, acf, pstream__);
+  return cast<typename boost::math::tools::promote_args<T0__, T1__>::type>(v);
 }
