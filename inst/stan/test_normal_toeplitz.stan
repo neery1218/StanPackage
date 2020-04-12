@@ -1,5 +1,5 @@
 functions {
-  real normal_toeplitz_lpdf(real[] y, real[] acf); // need _lpdf (see stan reference 9.3) defined in test_fun_dist_vector.hpp
+  real normal_toeplitz_lpdf(real[] y, real[] acf, real[] mu); // need _lpdf (see stan reference 9.3) defined in test_fun_dist_vector.hpp
 
   // power-exponential autocorrelation function
   // used to generate a psd toeplitz matrix.
@@ -21,7 +21,9 @@ data {
   real<lower=0> lambda_dat;
   real<lower=0> sigma_dat;
 
-  int<lower=1,upper=3> type;
+  real mu_dat[N];
+
+  int<lower=1,upper=4> type;
 }
 
 parameters {
@@ -29,6 +31,8 @@ parameters {
 
   real<lower=0> lambda;
   real<lower=0> sigma;
+
+  real mu[N];
 }
 
 model {
@@ -38,12 +42,13 @@ model {
 
   if(type == 1) {
     // gradient wrt lambda, sigma
-    y_dat ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
+    y_dat ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma), mu_dat);
   } else if(type == 2) {
     // gradient wrt y
-    y ~ normal_toeplitz(psd_acf(N, lambda_dat, 1, sigma_dat));
-  } else if(type == 3) {
+    y ~ normal_toeplitz(psd_acf(N, lambda_dat, 1, sigma_dat), mu_dat);
+  }
+  else if(type == 4) {
     // gradient wrt y and lambda,sigma
-    y ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma));
+    y ~ normal_toeplitz(psd_acf(N, lambda, 1, sigma), mu);
   }
 }

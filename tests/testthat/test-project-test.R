@@ -395,7 +395,6 @@ test_that("test_fun foo_dist all gradients", {
   expect_equal(lpR_grad, lpStan_grad)
 })
 
-# TODO: once a mean parameter is added, add those gradients too
 test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
   # generate data
   N <- 3
@@ -405,16 +404,17 @@ test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
   rho <- 1
   sigma <- runif(1, 0, max_sigma)
   toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
-  y <- rmvnorm(1,rep(0, N), toep)[1,]
-  data = list(N=N, y_dat=y, type=1, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
+  mu <- rep(runif(1, 0, 10), N)
+  y <- rmvnorm(1,mu, toep)[1,]
+  data = list(N=N, mu_dat=mu, y_dat=y, type=1, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
 
   # log posterior function
-  toep_logpost <- function(y, lambda, sigma) {
+  toep_logpost <- function(y, lambda, sigma, mu) {
     lprior <- dunif(lambda, min = 0, max = max_lambda, log = TRUE) +
       dunif(max_sigma, min=0, max=1, log=TRUE)
 
     N <- length(y)
-    llikelihood <- dmvnorm(y, mean = rep(0, N), sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
+    llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
     lprior + llikelihood
   }
 
@@ -428,7 +428,8 @@ test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
                       list(
                         lambda = runif(1, 0, max_lambda),
                         sigma = runif(1, 0, max_sigma),
-                        y = y
+                        y = y,
+                        mu = mu
                         )
                     },
                     simplify = FALSE)
@@ -437,7 +438,7 @@ test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
   lpR <- sapply(1:nsim, function(ii) {
     lambda <- Pars[[ii]]$lambda
     sigma <- Pars[[ii]]$sigma
-    toep_logpost(y, lambda, sigma)
+    toep_logpost(y, lambda, sigma, mu)
   })
   # log posterior calculations in Stan
   lpStan <- sapply(1:nsim, function(ii) {
@@ -455,7 +456,7 @@ test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
   lpR_grad <- sapply(1:nsim, function(ii) {
     lambda <- Pars[[ii]]$lambda
     sigma <- Pars[[ii]]$sigma
-    c(grad(function(x) toep_logpost(y, x, sigma),  x=lambda)[1], grad(function(x) toep_logpost(y, lambda, x),  x=sigma)[1])
+    c(grad(function(x) toep_logpost(y, x, sigma, mu),  x=lambda)[1], grad(function(x) toep_logpost(y, lambda, x, mu),  x=sigma)[1])
   })
 
   # stan gives gradients on unconstrained scale, so we divide by ParsMat to get the gradients we care about.
@@ -465,7 +466,7 @@ test_that("normal_toeplitz log density, gradients wrt toeplitz params", {
     rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)
   })
   ParsMat <- sapply(1:nsim, function(ii) {
-    c(Pars[[ii]]$y, Pars[[ii]]$lambda, Pars[[ii]]$sigma)
+    c(Pars[[ii]]$y, Pars[[ii]]$lambda, Pars[[ii]]$sigma, Pars[[ii]]$mu)
   })
 
   # divide gradient by lambda, sigma values to get gradients on the correct scale
@@ -485,16 +486,17 @@ test_that("normal_toeplitz log density, gradients wrt y", {
   rho <- 1
   sigma <- runif(1, 0, max_sigma)
   toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
-  y <- rmvnorm(1,rep(0, N), toep)[1,]
-  data = list(N=N, y_dat=y, type=2, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
+  mu <- rep(runif(1, 0, 10), N)
+  y <- rmvnorm(1, mu, toep)[1,]
+  data = list(N=N, y_dat=y, mu_dat=mu, type=2, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
 
   # log posterior function
-  toep_logpost <- function(y, lambda, sigma) {
+  toep_logpost <- function(y, lambda, sigma, mu) {
     lprior <- dunif(lambda, min = 0, max = max_lambda, log = TRUE) +
       dunif(max_sigma, min=0, max=1, log=TRUE)
 
     N <- length(y)
-    llikelihood <- dmvnorm(y, mean = rep(0, N), sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
+    llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
     lprior + llikelihood
   }
 
@@ -508,7 +510,8 @@ test_that("normal_toeplitz log density, gradients wrt y", {
                       list(
                         lambda = lambda,
                         sigma = sigma,
-                        y = rmvnorm(1, rep(0, N), toep)[1,]
+                        y = rmvnorm(1, rep(0, N), toep)[1,],
+                        mu = mu
                         )
                     },
                     simplify = FALSE)
@@ -516,7 +519,7 @@ test_that("normal_toeplitz log density, gradients wrt y", {
   # log posterior calculations in R
   lpR <- sapply(1:nsim, function(ii) {
     y <- Pars[[ii]]$y
-    toep_logpost(y, lambda, sigma)
+    toep_logpost(y, lambda, sigma, mu)
   })
   # log posterior calculations in Stan
   lpStan <- sapply(1:nsim, function(ii) {
@@ -533,7 +536,7 @@ test_that("normal_toeplitz log density, gradients wrt y", {
   # gradients wrt y
   lpR_grad <- sapply(1:nsim, function(ii) {
     y <- Pars[[ii]]$y
-    grad(function(x) toep_logpost(x, lambda, sigma),  x=y)
+    grad(function(x) toep_logpost(x, lambda, sigma, mu),  x=y)
   })
   lpStan_grad <- sapply(1:nsim, function(ii) {
     upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
@@ -554,16 +557,17 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
   rho <- 1
   sigma <- runif(1, 0, max_sigma)
   toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
-  y <- rmvnorm(1,rep(0, N), toep)[1,]
-  data = list(N=N, y_dat=y, type=3, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
+  mu <- rep(runif(1, 0, 10), N)
+  y <- rmvnorm(1,mu, toep)[1,]
+  data = list(N=N, y_dat=y, mu_dat=mu, type=4, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
 
   # log posterior function
-  toep_logpost <- function(y, lambda, sigma) {
+  toep_logpost <- function(y, lambda, sigma, mu) {
     lprior <- dunif(lambda, min = 0, max = max_lambda, log = TRUE) +
       dunif(max_sigma, min=0, max=1, log=TRUE)
 
     N <- length(y)
-    llikelihood <- dmvnorm(y, mean = rep(0, N), sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
+    llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
     lprior + llikelihood
   }
 
@@ -577,7 +581,8 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
                       list(
                         lambda = runif(1, 0, max_lambda),
                         sigma = runif(1, 0, max_sigma),
-                        y = rmvnorm(1, rep(0, N), toep)[1,]
+                        mu = rep(runif(1, 0, 10), N),
+                        y = rmvnorm(1, rep(runif(1,0,10), N), toep)[1,]
                         )
                     },
                     simplify = FALSE)
@@ -587,7 +592,8 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
     y <- Pars[[ii]]$y
     lambda <- Pars[[ii]]$lambda
     sigma <- Pars[[ii]]$sigma
-    toep_logpost(y, lambda, sigma)
+    mu <- Pars[[ii]]$mu
+    toep_logpost(y, lambda, sigma, mu)
   })
   # log posterior calculations in Stan
   lpStan <- sapply(1:nsim, function(ii) {
@@ -606,10 +612,12 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
     y <- Pars[[ii]]$y
     lambda <- Pars[[ii]]$lambda
     sigma <- Pars[[ii]]$sigma
+    mu <- Pars[[ii]]$mu
     c(
-      grad(function(x) toep_logpost(x, lambda, sigma),  x=y),
-      grad(function(x) toep_logpost(y, x, sigma),  x=lambda)[1],
-      grad(function(x) toep_logpost(y, lambda, x),  x=sigma)[1]
+      grad(function(x) toep_logpost(x, lambda, sigma, mu),  x=y),
+      grad(function(x) toep_logpost(y, x, sigma, mu),  x=lambda)[1],
+      grad(function(x) toep_logpost(y, lambda, x, mu),  x=sigma)[1],
+      grad(function(x) toep_logpost(y, lambda, sigma, x),  x=mu)
     )
   })
 
@@ -620,8 +628,8 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
     rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)
   })
   ParsMat <- sapply(1:nsim, function(ii) {
-    # divide y by one because it's not constrained
-    c(rep(1, length(y)), Pars[[ii]]$lambda, Pars[[ii]]$sigma)
+    # divide y, mu by one because it's not constrained
+    c(rep(1, length(y)), Pars[[ii]]$lambda, Pars[[ii]]$sigma, rep(1, length(mu)))
   })
 
   # divide gradient by lambda, sigma values to get gradients on the correct scale
