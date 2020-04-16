@@ -23,57 +23,55 @@ functions {
 
 data {
   int<lower=0> N;
+  int<lower=0> K;
+
   real X0;
   real Xt[N]; // observed data
 
   real<lower=0> delta_t;
-  int<lower=0> K;
+
+  // used to index into Xt_k (See transformed parameters)
+  int<lower = 1, upper = N * K> ii_obs[N];
+  int<lower = 1, upper = N * K> ii_mis[N * (K - 1)];
 }
 
 parameters {
 
   real<lower=0, upper=1> H;
   real mu;
-  real gamma;
+  real<lower=0> gamma;
   // real<lower=0> sigma; ignore for now
 
-  // Xt U Xt_k_fill = Xt_k (length N * K)
   real Xt_k_fill[N * (K - 1)]; // k-level approximation
   real dG[N*K];
 }
 
-model {
-  vector[N*K] Xt_k;
+transformed parameters {
+  // Xt U Xt_k_fill = Xt_k (length N * K)
+  real Xt_k[N * K];
 
-  real zeroes[N*K];
-  int obs_index = 1;
-  int fill_index = 1;
+  Xt_k[ii_obs] = Xt;
 
-  // it's hard to justify using these priors
-  H ~ uniform(0, 1);
-  mu ~ uniform(-5, 5);
-  gamma ~ uniform(0, 10);
-
-  // fill in Xt_k using observed values (Xt) and filler values (Xt_k_fill)
-  for (i in 1:(N * K)) {
-    if (i % K == 0) {
-      Xt_k[i] = Xt[obs_index];
-      obs_index = obs_index + 1;
-    } else {
-      Xt_k[i] = Xt_k_fill[fill_index];
-      fill_index = fill_index + 1;
-    }
+  if (K > 1) {
+    Xt_k[ii_mis] = Xt_k_fill;
   }
 
   // base case
   Xt_k[1] = X0 + fou_mu(X0, gamma, mu) + delta_t / K + dG[1];
+
+  // recursive case
   for (i in 2:(N*K)) {
     Xt_k[i] = Xt_k[i-1] + fou_mu(Xt_k[i-1], gamma, mu) * (delta_t / K) + dG[i];
   }
 
-  for (i in 1:(N*K)) {
-    zeroes[i] = 0;
-  }
+  // refill observed values?
 
-  dG ~ normal_toeplitz(acf_fun(N, K, H, delta_t), zeroes);
+}
+
+model {
+  H ~ uniform(0, 1); // stan automatically does this, i just think it's better to be explicit
+  mu ~ uniform(0, 1);
+  gamma ~ uniform(0, 1);
+
+  dG ~ normal_toeplitz(acf_fun(N, K, H, delta_t), rep_array(0.0, N * K));
 }
