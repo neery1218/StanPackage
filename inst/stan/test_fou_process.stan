@@ -43,12 +43,14 @@ parameters {
   // real<lower=0> sigma; ignore for now
 
   real Xt_k_fill[N * (K - 1)]; // k-level approximation
-  real dG[N*K];
 }
 
 transformed parameters {
   // Xt U Xt_k_fill = Xt_k (length N * K)
   real Xt_k[N * K];
+  real dX[N * K];
+  real mus[N * K];
+  real dG[N*K];
 
   Xt_k[ii_obs] = Xt;
 
@@ -56,22 +58,39 @@ transformed parameters {
     Xt_k[ii_mis] = Xt_k_fill;
   }
 
-  // base case
-  Xt_k[1] = X0 + fou_mu(X0, gamma, mu) + delta_t / K + dG[1];
-
-  // recursive case
+  # fill in dX
+  dX[1] = Xt_k[1] - X0;
   for (i in 2:(N*K)) {
-    Xt_k[i] = Xt_k[i-1] + fou_mu(Xt_k[i-1], gamma, mu) * (delta_t / K) + dG[i];
+    dX[i] = Xt_k[i] - Xt_k[i - 1];
   }
 
-  // refill observed values?
+  # calculate mus
+  mus[1] = fou_mu(X0, gamma, mu) * (delta_t / K);
+  for (i in 2:(N*K)) {
+    mus[i] = fou_mu(Xt_k[i - 1], gamma, mu) * (delta_t / K);
+  }
 
+  # Xt_k[i] ~= Xt_k[i - 1] + fou_mu(Xt_k[i - 1], gamma, mu) * (delta_t / K) + sigma * dG[i]
+  # => dG[i] ~= (Xt_k[i] - Xt_k[i - 1]) - fou_mu(Xt_k[i - 1], gamma, mu) * (delta_t / K) / sigma
+  for (i in 1:(N*K)) {
+    dG[i] = dX[i] - mus[i] * (delta_t / K);
+  }
 }
 
 model {
   H ~ uniform(0, 1); // stan automatically does this, i just think it's better to be explicit
-  mu ~ uniform(0, 1);
-  gamma ~ uniform(0, 1);
+  // mu ~ uniform(, 1);
+  // gamma ~ uniform(0, 1);
 
+  // real normal_toeplitz(acf, mus)
   dG ~ normal_toeplitz(acf_fun(N, K, H, delta_t), rep_array(0.0, N * K));
+
+  /*
+   Stan warning: Left-hand side of sampling statement (~) may contain a non-linear transform of a parameter or local variable.
+  If it does, you need to include a target += statement with the log absolute determinant of the Jacobian of the transform.
+  Left-hand-side of sampling statement:
+      dG ~ normal_toeplitz(...)
+  */
+  // sigma is permanently set to 1
+  target += ( -1 * N * log(1) );
 }
