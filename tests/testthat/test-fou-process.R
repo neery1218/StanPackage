@@ -1,8 +1,8 @@
 require(rstan)
 require(mvtnorm)
 require(rethinking)
-library(matrixcalc)
-library(numDeriv)
+require(matrixcalc)
+require(numDeriv)
 
 test_that("fOU process log density, gradients ", {
 

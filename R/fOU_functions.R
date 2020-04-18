@@ -1,7 +1,7 @@
 require(rstan) # observe startup messages
 require(mvtnorm)
-library(matrixcalc)
-library(tidyverse)
+require(matrixcalc)
+require(tidyverse)
 require(ggplot2)
 require(gridExtra)
 
@@ -57,7 +57,11 @@ fOU_sim <- function(N, theta, X0, delta_t) {
 }
 
 # returns a stanfit object that's fitted to c(X0, Xt)
-fit_fOU_process <- function(Xt, K, iter = 2e3, control = list(adapt_delta = 0.95)) {
+fit_fOU_process <- function(fOU_data, K, iter = 2e3, control = list(adapt_delta = 0.95)) {
+  Xt <- fOU_data$Xt
+  delta_t <- fOU_data$delta_t
+  X0 <- fOU_data$X0
+
   N <- length(Xt) - 1  # remove X0
 
   # when we're using k-level approximations, the stan model

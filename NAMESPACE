@@ -3,4 +3,8 @@ exportPattern("^[^\\.]")
 import(Rcpp)
 import(methods)
 importFrom(rstan, sampling)
+importFrom("graphics", "abline", "lines", "par", "plot", "points",
+           "polygon")
+importFrom("stats", "dnorm", "dunif", "quantile")
+importFrom("utils", "tail")
 useDynLib(testproject1, .registration = TRUE)
