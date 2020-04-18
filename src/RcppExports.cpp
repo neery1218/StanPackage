@@ -7,20 +7,10 @@
 using namespace Rcpp;
 
 
-RcppExport SEXP _rcpp_module_boot_stan_fit4foo_dist_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4test_0_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4test_1_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4test_fun_dist_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4test_fun_dist_vector_mod();
-RcppExport SEXP _rcpp_module_boot_stan_fit4test_normal_toeplitz_mod();
+RcppExport SEXP _rcpp_module_boot_stan_fit4test_fou_process_mod();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_rcpp_module_boot_stan_fit4foo_dist_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4foo_dist_mod, 0},
-    {"_rcpp_module_boot_stan_fit4test_0_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_0_mod, 0},
-    {"_rcpp_module_boot_stan_fit4test_1_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_1_mod, 0},
-    {"_rcpp_module_boot_stan_fit4test_fun_dist_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_fun_dist_mod, 0},
-    {"_rcpp_module_boot_stan_fit4test_fun_dist_vector_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_fun_dist_vector_mod, 0},
-    {"_rcpp_module_boot_stan_fit4test_normal_toeplitz_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_normal_toeplitz_mod, 0},
+    {"_rcpp_module_boot_stan_fit4test_fou_process_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4test_fou_process_mod, 0},
     {NULL, NULL, 0}
 };
 
