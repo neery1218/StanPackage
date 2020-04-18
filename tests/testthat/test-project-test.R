@@ -548,94 +548,94 @@ require(mvtnorm)
 #   expect_equal(lpR_grad, lpStan_grad[1:3,]) # default tolerance (1.5e-8) causes errors
 # })
 #
-# test_that("normal_toeplitz log density, gradients wrt everything", {
-#   # generate data
-#   N <- 3
-#   max_lambda <- 100
-#   max_sigma <- 1
-#   lambda <- runif(1, 0, max_lambda)
-#   rho <- 1
-#   sigma <- runif(1, 0, max_sigma)
-#   toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
-#   mu <- rep(runif(1, 0, 10), N)
-#   y <- rmvnorm(1,mu, toep)[1,]
-#   data = list(N=N, y_dat=y, mu_dat=mu, type=4, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
-#
-#   # log posterior function
-#   toep_logpost <- function(y, lambda, sigma, mu) {
-#     lprior <- dunif(lambda, min = 0, max = max_lambda, log = TRUE) +
-#       dunif(max_sigma, min=0, max=1, log=TRUE)
-#
-#     N <- length(y)
-#     llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
-#     lprior + llikelihood
-#   }
-#
-#   fit <- rstan::sampling(stanmodels$test_normal_toeplitz, data = data,
-#                          iter = 1, chains = 1, algorithm = "Fixed_param")
-#
-#   # generate values of the parameters in the model
-#   nsim <- 18
-#   Pars <- replicate(n = nsim,
-#                     expr = {
-#                       list(
-#                         lambda = runif(1, 0, max_lambda),
-#                         sigma = runif(1, 0, max_sigma),
-#                         mu = rep(runif(1, 0, 10), N),
-#                         y = rmvnorm(1, rep(runif(1,0,10), N), toep)[1,]
-#                         )
-#                     },
-#                     simplify = FALSE)
-#
-#   # log posterior calculations in R
-#   lpR <- sapply(1:nsim, function(ii) {
-#     y <- Pars[[ii]]$y
-#     lambda <- Pars[[ii]]$lambda
-#     sigma <- Pars[[ii]]$sigma
-#     mu <- Pars[[ii]]$mu
-#     toep_logpost(y, lambda, sigma, mu)
-#   })
-#   # log posterior calculations in Stan
-#   lpStan <- sapply(1:nsim, function(ii) {
-#     upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
-#     rstan::log_prob(object = fit,
-#                     upars = upars,
-#                     adjust_transform = FALSE)
-#   })
-#
-#   # differences should be identical
-#   lp_diff <- lpR - lpStan
-#   expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)))
-#
-#   # gradients wrt lambda, sigma
-#   lpR_grad <- sapply(1:nsim, function(ii) {
-#     y <- Pars[[ii]]$y
-#     lambda <- Pars[[ii]]$lambda
-#     sigma <- Pars[[ii]]$sigma
-#     mu <- Pars[[ii]]$mu
-#     c(
-#       grad(function(x) toep_logpost(x, lambda, sigma, mu),  x=y),
-#       grad(function(x) toep_logpost(y, x, sigma, mu),  x=lambda)[1],
-#       grad(function(x) toep_logpost(y, lambda, x, mu),  x=sigma)[1],
-#       grad(function(x) toep_logpost(y, lambda, sigma, x),  x=mu)
-#     )
-#   })
-#
-#   # stan gives gradients on unconstrained scale, so we divide by ParsMat to get the gradients we care about.
-#   # the math for this is explained in the "constrained mu" test above.
-#   lpStan_grad_constrained <- sapply(1:nsim, function(ii) {
-#     upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
-#     rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)
-#   })
-#   ParsMat <- sapply(1:nsim, function(ii) {
-#     # divide y, mu by one because it's not constrained
-#     c(rep(1, length(y)), Pars[[ii]]$lambda, Pars[[ii]]$sigma, rep(1, length(mu)))
-#   })
-#
-#   # divide gradient by lambda, sigma values to get gradients on the correct scale
-#   lpStan_grad <- lpStan_grad_constrained / ParsMat
-#
-#   # gradients should be (almost) identical
-#   # expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
-#   expect_equal(lpR_grad, lpStan_grad) # default tolerance (1.5e-8) causes errors
-# })
+test_that("normal_toeplitz log density, gradients wrt everything", {
+  # generate data
+  N <- 3
+  max_lambda <- 100
+  max_sigma <- 1
+  lambda <- runif(1, 0, max_lambda)
+  rho <- 1
+  sigma <- runif(1, 0, max_sigma)
+  toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
+  mu <- rep(runif(1, 0, 10), N)
+  y <- rmvnorm(1,mu, toep)[1,]
+  data = list(N=N, y_dat=y, mu_dat=mu, type=4, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
+
+  # log posterior function
+  toep_logpost <- function(y, lambda, sigma, mu) {
+    lprior <- dunif(lambda, min = 0, max = max_lambda, log = TRUE) +
+      dunif(max_sigma, min=0, max=1, log=TRUE)
+
+    N <- length(y)
+    llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
+    lprior + llikelihood
+  }
+
+  fit <- rstan::sampling(stanmodels$test_normal_toeplitz, data = data,
+                         iter = 1, chains = 1, algorithm = "Fixed_param")
+
+  # generate values of the parameters in the model
+  nsim <- 18
+  Pars <- replicate(n = nsim,
+                    expr = {
+                      list(
+                        lambda = runif(1, 0, max_lambda),
+                        sigma = runif(1, 0, max_sigma),
+                        mu = rep(runif(1, 0, 10), N),
+                        y = rmvnorm(1, rep(runif(1,0,10), N), toep)[1,]
+                        )
+                    },
+                    simplify = FALSE)
+
+  # log posterior calculations in R
+  lpR <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    lambda <- Pars[[ii]]$lambda
+    sigma <- Pars[[ii]]$sigma
+    mu <- Pars[[ii]]$mu
+    toep_logpost(y, lambda, sigma, mu)
+  })
+  # log posterior calculations in Stan
+  lpStan <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
+    rstan::log_prob(object = fit,
+                    upars = upars,
+                    adjust_transform = FALSE)
+  })
+
+  # differences should be identical
+  lp_diff <- lpR - lpStan
+  expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)))
+
+  # gradients wrt lambda, sigma
+  lpR_grad <- sapply(1:nsim, function(ii) {
+    y <- Pars[[ii]]$y
+    lambda <- Pars[[ii]]$lambda
+    sigma <- Pars[[ii]]$sigma
+    mu <- Pars[[ii]]$mu
+    c(
+      grad(function(x) toep_logpost(x, lambda, sigma, mu),  x=y),
+      grad(function(x) toep_logpost(y, x, sigma, mu),  x=lambda)[1],
+      grad(function(x) toep_logpost(y, lambda, x, mu),  x=sigma)[1],
+      grad(function(x) toep_logpost(y, lambda, sigma, x),  x=mu)
+    )
+  })
+
+  # stan gives gradients on unconstrained scale, so we divide by ParsMat to get the gradients we care about.
+  # the math for this is explained in the "constrained mu" test above.
+  lpStan_grad_constrained <- sapply(1:nsim, function(ii) {
+    upars <- rstan::unconstrain_pars(fit, pars = Pars[[ii]])
+    rstan::grad_log_prob(fit, upars, adjust_transform = FALSE)
+  })
+  ParsMat <- sapply(1:nsim, function(ii) {
+    # divide y, mu by one because it's not constrained
+    c(rep(1, length(y)), Pars[[ii]]$lambda, Pars[[ii]]$sigma, rep(1, length(mu)))
+  })
+
+  # divide gradient by lambda, sigma values to get gradients on the correct scale
+  lpStan_grad <- lpStan_grad_constrained / ParsMat
+
+  # gradients should be (almost) identical
+  # expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
+  expect_equal(lpR_grad, lpStan_grad) # default tolerance (1.5e-8) causes errors
+})
