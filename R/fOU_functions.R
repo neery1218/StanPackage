@@ -451,15 +451,15 @@ plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated
 #' @export
 plot_param_posterior_distributions <- function(post_tb, fOU_data) {
   p1 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=H, group=K, color = K)) +
+    geom_density(mapping=aes(x=post_tb$H, group=post_tb$K, color = post_tb$K)) +
     geom_vline(xintercept = fOU_data$theta$H)
 
   p2 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=gamma, group=K, color = K)) +
+    geom_density(mapping=aes(x=post_tb$gamma, group=post_tb$K, color = post_tb$K)) +
     geom_vline(xintercept = fOU_data$theta$gamma)
 
   p3 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=mu, group=K, color = K)) +
+    geom_density(mapping=aes(x=post_tb$mu, group=post_tb$K, color = post_tb$K)) +
     geom_vline(xintercept = fOU_data$theta$mu)
 
   grid.arrange(p1, p2, p3, nrow=3)

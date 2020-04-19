@@ -13,7 +13,10 @@ Encoding: UTF-8
 LazyData: true
 Depends: 
     R (>= 3.4.0)
-Imports: 
+Imports:
+    stats,
+    utils,
+    graphics,
     methods,
     Rcpp (>= 0.12.0),
     rstan (>= 2.18.1),
@@ -23,6 +26,7 @@ Imports:
     mvtnorm,
     SuperGauss,
     ggplot2,
+    gridExtra, 
     dplyr
 LinkingTo: 
     BH (>= 1.66.0),
