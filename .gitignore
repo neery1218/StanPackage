@@ -9,6 +9,8 @@ vignettes/.build.timestamp
 
 # RStudio
 .Rproj.user
+.RData
+man/
 
 # C++
 *.o
