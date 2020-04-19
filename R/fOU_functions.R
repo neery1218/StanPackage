@@ -5,10 +5,40 @@ require(tidyverse)
 require(ggplot2)
 require(gridExtra)
 
+
+#' Drift term for the fOU process.
+#'
+#' @param y_n is a real number.
+#' @param theta is a list with the parameters of the fOU process (where sigma is permanently 1):
+#' \describe{
+#'   \item{`H`}{Hurst index which is between 0 and 1.}
+#'   \item{`mu`}{Mean of the fOU process which is greater than 0.}
+#'   \item{`gamma`}{Mean reverting speed of the process which is greater than 0.}
+#' }
+#' @return A real number.
+#' @export
+#'
 fou_mu <- function(y_n, theta) {
   -1 * theta$gamma * (y_n - theta$mu)
 }
 
+#' Autocorrelation function for the fOU process.
+#'
+#' @param theta is a list with the parameters of the fOU process (where sigma is permanently 1):
+#' \describe{
+#'   \item{`H`}{Hurst index which is between 0 and 1.}
+#'   \item{`mu`}{Mean of the fOU process which is positive.}
+#'   \item{`gamma`}{Mean reverting speed of the process which is positive.}
+#'   }
+#' @param dt is the interobservation time between each datapoint of the fOU process.
+#' @param n is the number of observations of the fOU process.
+#' @return An `n ` dimensional vector of covariances.
+#' @details The toeplitz matrix of the autocorrelation function of the fOU process is defined by the following vector of covariances:
+#' ```
+#' V[i] = (abs(i)^(2H) + abs(i - 2)^(2H) - 2 x abs(i - 1)^(2H)
+#'
+#' ```
+#' @export
 fou_gamma <- function(theta, dt, n){
   gamma <- rep(0, n)
   H <- theta$H
@@ -18,16 +48,35 @@ fou_gamma <- function(theta, dt, n){
   gamma
 }
 
+#' Stochastic deviation for the fOU process.
+#'
+#' @param theta is a list with the parameters of the fOU process (where sigma is permanently 1):
+#' \describe{
+#'   \item{`H`}{Hurst index which is between 0 and 1.}
+#'   \item{`mu`}{Mean of the fOU process which is positive.}
+#'   \item{`gamma`}{Mean reverting speed of the process which is positive.}
+#'   }
+#' @param dt is the interobservation time between each datapoint of the fOU process.
+#' @param n is the number of observations of the fOU process.
+#' @return A real number.
+#' @details Maintained constant at 1 to simplify calculations.
+#' @export
 fou_sigma <- function(theta, dt, N) {
   1
 }
 
-# thanks to mlysy for writing this function!
 #' Generate cSDE observations.
 #'
 #' @param X0 Initial cSDE value at time `t = 0`.
+#' @param dt The interobservation time between each observation of the cSDE.
+#' @param theta List of parameters of the cSDE.
+#' @param mu_fun Drift term of the cSDE which is a function of Xt and theta.
+#' @param sigma_fun Stochastic deviationof the cSDE which is a function of theta.
+#' @param gamma_fun Autocorrelation of the cSDE which is a function of theta, dt and N.
 #' @param fft Whether to use fast (but sometimes less stable) FFT simulation method.  See [SuperGauss::rnormtz()].
 #' @return A vector of `N+1` cSDE observations recorded at intervals of `dt` starting from `X0`.
+#' @details Function provided by Prof. Lysy that simulates data generation for any coloured-noise stochastic differential equation.Tthanks to mlysy for writing this function!
+#' @export
 csde_sim <- function(N, dt, X0, theta,
                      mu_fun, sigma_fun, gamma_fun, fft = TRUE) {
   # dXt = X_{t-1} + mu_fun(X_{t-1}, theta) * dt + sigma * dG
@@ -45,7 +94,23 @@ csde_sim <- function(N, dt, X0, theta,
   Xt
 }
 
-# given parameters, simulates data from the fOU(theta).
+#' Generate fOU observations.
+#'
+#' @param N is the number of observations to generate.
+#' @param theta is a list with the parameters of the fOU process fOU process (where sigma is permanently 1):
+#' \describe{
+#'   \item{`H`}{Hurst index which is between 0 and 1.}
+#'   \item{`mu`}{Mean of the fOU process which is positive.}
+#'   \item{`gamma`}{Mean reverting speed of the process which is positive.}
+#'   }
+#' @param X0 Initial fOU value at time `t = 0`.
+#' @param delta_t is the interobservation time between each observation of the fOU process.
+#' @return A vector of `N+1` fOU observations recorded at intervals of `dt` starting from `X0`.
+#' @details Generates data for the fOU which is characterized by the following equation:
+#' \deqn{
+#' dX_{t} = \gamma(X_{t} - \mu)*\Delta t + \sigma B^{H}_{t}
+#' }
+#' @export
 fOU_sim <- function(N, theta, X0, delta_t) {
   Xt <- csde_sim(N, delta_t, X0, theta, fou_mu, fou_sigma, fou_gamma)
   list(
@@ -56,7 +121,20 @@ fOU_sim <- function(N, theta, X0, delta_t) {
   )
 }
 
-# returns a stanfit object that's fitted to c(X0, Xt)
+#' Fits an fOU process to the given data using a pre-compiled stan mode.
+#'
+#' @param fOU_data is a list of
+#' \describe{
+#'   \item{`Xt`}{Vector of observations at level k.}
+#'   \item{`K`}{The level of euler-approximation which is a positive number less than N.}
+#'   \item{`delta_t`}{The interobservation time between each observation of the fOU process.}
+#'   }
+#' @param X0 Initial fOU value at time `t = 0`.
+#' @param Maximum number of total iterations.
+#' @param control List of control parameter for rstan::sampling. See [rstan::sampling()] for more details.
+#' @return A stanfit object that is fitted to `c(X0,Xt)`.
+#' @return A vector of `N+1` fOU observations recorded at intervals of `dt` starting from `X0`.
+#' @export
 fit_fOU_process <- function(fOU_data, K, iter = 2e3, control = list(adapt_delta = 0.95)) {
   Xt <- fOU_data$Xt
   delta_t <- fOU_data$delta_t
@@ -87,6 +165,12 @@ fit_fOU_process <- function(fOU_data, K, iter = 2e3, control = list(adapt_delta 
   fit
 }
 
+#' Fits an fOU process to the given data across multiple k-level approximations using a pre-compiled stan mode.
+#'
+#' @param Xt A vector of fOU observations.
+#' @param Ks is vector of levels for the k-level approximations to be fitted.
+#' @return A list of `Ks` stanfit objects that is fitted to `c(X0,Xt)` for each level k.
+#' @export
 fit_fOU_multiple_K <- function(Xt, Ks) {
   all_samples <- data.frame()
 
@@ -105,7 +189,21 @@ fit_fOU_multiple_K <- function(Xt, Ks) {
   list(post_samples=all_samples, fits=fits)
 }
 
-# thanks to mlysy for writing this function!
+
+#' Log-density of cSDE observations.
+#'
+#' Calculates the log-density of `p(Xt | theta)`, where `Xt` are observations of a cSDE recorded at interobservation time `dt`.
+#' Calculate log density of cSDE observations.
+#'
+#' @param Xt A vector of cSDE observations.
+#' @param dt The interobservation time between each observation of the cSDE.
+#' @param theta List of parameters of the cSDE
+#' @param mu_fun Drift term of the cSDE which is a function of Xt and theta.
+#' @param sigma_fun Stochastic deviationof the cSDE which is a function of theta.
+#' @param gamma_fun Autocorrelation of the cSDE which is a function of theta, dt and N.
+#' @details Calculates the log-density of `p(Xt | theta)`, where `Xt` are observations of a cSDE recorded at interobservation time `dt`. Thanks to mlysy for writing this function!
+#' @return A scalar containing the log-density of the cSDE evaluated at its arguments.
+#' @export
 csde_logdens <- function(Xt, dt, theta,
                          mu_fun, sigma_fun, gamma_fun) {
   dX <- diff(Xt)
@@ -119,7 +217,19 @@ csde_logdens <- function(Xt, dt, theta,
   ld - N * log(sig) # jacobian for change-of-variables dX <-> dG
 }
 
-# wrapper around csde_logdens for the fOU process
+
+#' Log-density of fOU observations.
+#'
+#' @param Xt A vector of fOU observations.
+#' @param delta_t is the interobservation time between each observation of the fOU process.
+#' @param theta is a list with the parameters of the fOU process fOU process (where sigma is permanently 1):
+#' \describe{
+#'   \item{`H`}{Hurst index which is between 0 and 1.}
+#'   \item{`mu`}{Mean of the fOU process which is positive.}
+#'   \item{`gamma`}{Mean reverting speed of the process which is positive.}
+#'   }
+#' @returns A scalar containing the log-density of the fOU evaluated at its arguments.
+#' @export
 fou_logdens <- function(Xt, delta_t, theta) {
   csde_logdens(Xt, delta_t, theta, fou_mu, fou_sigma, fou_gamma) +
     dunif(theta$H, 0, 1, log = TRUE) + # H ~ uniform(1)
