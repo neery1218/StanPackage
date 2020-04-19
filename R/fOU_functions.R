@@ -256,7 +256,7 @@ fou_logdens <- function(Xt, delta_t, theta) {
 #' @param thresholds List of thresholds for mu, gamma and H to perturb each term to grid search over.
 #' @return Plot of the likelihoods of each parameter.
 #' @details Check that theta_hat is a global AND local maximum.This is done by essentially grid searching one parameter while holding everything else constant.This is expensive, but feasible since our parameter constraints are fairly tight.
-#'
+#' @export
 plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1, H = 0.05)) {
   post_samples <- rstan::extract(fit, pars=c("gamma", "mu", "H"))
   Xtk_samples <- rstan::extract(fit)$Xt_k
@@ -301,16 +301,28 @@ plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1
   abline(v = theta_hat$mu, col = "red")
 }
 
-# given a stanfit object, predicts the next n data points using the parameters' posterior distributions
-# given a stanfit object, draws parameters from the posterior distributions and simulates fOU data.
-# the new fOU data is then aggregated to produce prediction confidence intervals.
-# this is an expensive computation.
-
+#' Given fOU_data, calculates the observed fBM increments.
+#'
+#' @param fOU_data fOU_data object returned from fOU_sim
+#' @param theta parameters used to generate fOU_data
+#' @return Vector of points corresponding to the fBM increments
+#' @export
+get_dGs <- function(fOU_data, theta) {
+  Xt <- fOU_data$Xt
+  dX <- diff(Xt)
+  N <- length(dX)
+  mu <- fou_mu(Xt[1:N], theta) # drift
+  sig <- fou_sigma(theta) # diffusion
+  gam <- fou_gamma(theta, fOU_data$delta_t, N) # autocorrelation
+  dG <- (dX - mu * fOU_data$delta_t) / sig # noise increments
+  dG
+}
 
 #' Make predictions using an fOU fit.
 #'
 #' Given a Stan fit object, it predicts the next n data points using the parameters' posterior distributions.
 #'
+#' @param fOU_data fOU_data object returned from fOU_sim
 #' @param fit Stan fit object of an fOU process.
 #' @param X0 Initial fOU value at time `t = 0`.
 #' @param delta_t Interobservation time between each observation of the fOU process.
@@ -318,30 +330,56 @@ plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1
 #' @param n_samples Number of sample paths to simulate.
 #' @return Vector of n_points containing the predicted fOU points.
 #' @details Draws parameters from the posterior distributions and simulates fOU data. The new fOU data is then aggregated to produce prediction confidence intervals. This is an expensive computation.
-fOU_predict <- function(fit, X0, delta_t, n_points, n_samples) {
+#' @export
+fOU_predict <- function(fOU_data, fit, X0, delta_t, n_points, n_samples) {
 
   # each row contains a sample path taken by the fitted fOU process
   pred_matrix <- matrix(nrow = n_samples, ncol = n_points + 1)
   posterior_samples <- rstan::extract(fit, pars=c("mu", "gamma", "H"))
+
+  N <- length(fOU_data$Xt) - 1 # remove X0
 
   for (i in 1:n_samples) {
     # draw parameters from posterior distribution
     mu <- sample(posterior_samples$mu, 1)
     gamma <- sample(posterior_samples$gamma, 1)
     H <- sample(posterior_samples$H, 1)
+    theta <- list(mu=mu, gamma=gamma, H=H)
 
-    # sample path using parameters
-    # FIXME: This is incorrect. the dG's calculated in fOU_sim below aren't correlated with the dG's from before.
-    # To do that, we can't use fOU_sim.
-    # This will work for H = 0.5, and we probably can't tell the different for H in [0.3, 0.7]
-    # use condMVN here with the original dGs.
-    fOU_data_pred <- fOU_sim(n_points, theta = list(mu=mu, gamma=gamma, H=H), X0, delta_t)
-    pred_matrix[i, ] <- fOU_data_pred$Xt
+    # get observed dGs
+    dGs_obs <- get_dGs(fOU_data, theta)
+
+    # construct giant toeplitz matrix
+    big_toep <- toeplitz(fou_gamma(theta, fOU_data$delta_t, length(dGs_obs) + n_points))
+    sigma_11 <- big_toep[1:n_points, 1:n_points]
+    sigma_12 <- big_toep[1:n_points, (n_points+1):(N+n_points)]
+    sigma_21 <- big_toep[(n_points+1):(N+n_points), 1:n_points]
+
+    sigma_22 <- big_toep[(n_points+1):(N+n_points), (n_points+1):(N+n_points)]
+
+    # dg_future | dg_obs= g ~ Normal(sigma_12 * inverse(sigma_22) * g, sigma_11 - sigma_12 * inverse(sigma_22) * sigma_21)
+    # TODO: use solveV
+    inv_sigma_22 <- solve(sigma_22)
+    cond_sigma <- sigma_11 - sigma_12 %*% inv_sigma_22 %*% sigma_21
+    cond_mu <- sigma_12 %*% solve(sigma_22) %*% dGs_obs
+
+    dGs_future <- mvtnorm::rmvnorm(1, cond_mu, cond_sigma)
+
+    sig <- fou_sigma(theta, delta_t, n_points) # hardcoded to one
+
+    # construct Xt_future
+    Xt_future <- rep(0, n_points+1) # cSDE time series
+    Xt_future[1] <- X0 # initialize
+
+    for(ii in 1:n_points) {
+      # recursion
+      Xt_future[ii + 1] <- Xt_future[ii] + fou_mu(Xt_future[ii], theta) * delta_t + sig * dGs_future[ii]
+    }
+
+    pred_matrix[i, ] <- Xt_future
   }
-
   pred_matrix
 }
-
 
 #' Plot prediction intervals.
 #'
@@ -357,6 +395,7 @@ fOU_predict <- function(fit, X0, delta_t, n_points, n_samples) {
 #' @param n_points Number of points to predict.
 #' @param n_samples Number of sample paths to simulate.
 #' @return Plot of prediction intervals of each of the fOU parameters.
+#' @export
 plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples) {
   Xt <- tail(fOU_data$Xt, 20)
   N <- length(Xt)
@@ -364,18 +403,12 @@ plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples
   par(mfrow=c(1,1))
   plot(NULL, ylim=c(-20,20), xlim = c(1, N + n_points), xlab = "time (t)", ylab = "Xt", main = "Predictions with sample paths")
   points(1:N, Xt)
-  cols = c("grey20", "grey50", "grey90")
 
-  pred_matrix <- fOU_predict(fit, tail(fOU_data$Xt, 1), delta_t, n_points - 1, n_samples)
-  CI <- apply(pred_matrix, 2, function(ts) { quantile(ts, probs = c(0.25, 0.75)) })
+  pred_matrix <- fOU_predict(fOU_data, fit, tail(fOU_data$Xt, 1), delta_t, n_points - 1, n_samples)
+  CI <- apply(pred_matrix, 2, function(ts) { quantile(ts, probs = c(0.05, 0.95)) })
 
   # 90% confidence interval
   polygon(c(N:(N + n_points - 1), rev(N:(N + n_points - 1))), c(CI[1,], rev(CI[2,])), col = "grey90", border = NA)
-
-  for (i in 1:10) {
-    Xt <- fOU_sim(n_points - 1, fOU_data$theta, tail(fOU_data$Xt,1), fOU_data$delta_t)$Xt
-    lines(N:(N + n_points - 1), Xt, col = "black")
-  }
 }
 
 #' Plot confindence intervals.
@@ -392,6 +425,7 @@ plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples
 #' @param N Number of observations of the fOU process.
 #' @param title Title of the plot.
 #' @return Plot of confidence intervals of each of the fOU parameters.
+#' @export
 plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated points") {
   t_k <- (1 : (K * N)) / K
 
@@ -411,6 +445,7 @@ plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated
 #' @param post_tb Tibble of posterior samples.
 #' @param fOU_data data object returned by fOU_sim
 #' @return Plot of the posterior distribution of each parameter of the fOU process.
+#' @export
 plot_param_posterior_distributions <- function(post_tb, fOU_data) {
   p1 <- ggplot(data=post_tb) +
     geom_density(mapping=aes(x=H, group=K, color = K)) +

@@ -2,6 +2,12 @@ require(rstan)
 require(numDeriv)
 require(mvtnorm)
 
+# Note: A lot of these tests are commented out because they test stan files that aren't integral to the project.
+# I removed the unncessary stan files to reduce devtools::check() time.
+# If I include the stan files, the building time (and devtools::check()) time increases to 10 minutes.
+# The tests are still useful, and I plan to uncomment them on github, just not for submission.
+
+
 # commented out because the test takes a long time.
 # test_that("test_fun unconstrained mu point estimate", {
 #   options(mc.cores = parallel::detectCores()) # TODO: maybe reset after end of test?

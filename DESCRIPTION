@@ -22,7 +22,8 @@ Imports:
     numDeriv,
     mvtnorm,
     SuperGauss,
-    ggplot2
+    ggplot2,
+    dplyr
 LinkingTo: 
     BH (>= 1.66.0),
     Rcpp (>= 0.12.0),
