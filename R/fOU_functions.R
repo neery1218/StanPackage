@@ -105,11 +105,11 @@ csde_sim <- function(N, dt, X0, theta,
 #'   \item{gamma}{Mean reverting speed of the process which is positive.}
 #'   }
 #' @param X0 Initial fOU value at time `t = 0`.
-#' @param delta_t is the interobservation time between each observation of the fOU process.
+#' @param delta_t The interobservation time between each observation of the fOU process.
 #' @return A vector of `N+1` fOU observations recorded at intervals of `dt` starting from `X0`.
 #' @details Generates data for the fOU which is characterized by the following equation:
 #' \deqn{
-#' dX_{t} = \gamma(X_{t} - \mu)*\Delta t + \sigma B^{H}_{t}
+#' dX_t = \gamma(X_t - \mu)*\Delta t + \sigma B^{H}_t
 #' }
 #' @export
 fOU_sim <- function(N, theta, X0, delta_t) {
@@ -241,9 +241,22 @@ fou_logdens <- function(Xt, delta_t, theta) {
     dnorm(theta$mu, 0, 10, log = TRUE)
 }
 
-# check that theta_hat is a global AND local maximum.
-# This is done by essentially grid searching one parameter while holding everything else constant.
-# This is expensive, but feasible since our parameter constraints are fairly tight.
+#' Plot likelihoods of fOU parameters.
+#'
+#' Plots log likelihoods for each of the fOU parameters - H, gamma and mu.
+#'
+#' @param fOU_data is a list of
+#' \describe{
+#'   \item{Xt}{Vector of observations at level k.}
+#'   \item{delta_t}{The interobservation time between each observation of the fOU process.}
+#'   \item{X0}{Initial fOU value at time `t = 0`.}
+#'   }
+#' @param fit Stan fit object fitted on the `fOU_data`.
+#' @param K The level of euler-approximation which is a positive number less than N.
+#' @param thresholds List of thresholds for mu, gamma and H to perturb each term to grid search over.
+#' @return Plot of the likelihoods of each parameter.
+#' @details Check that theta_hat is a global AND local maximum.This is done by essentially grid searching one parameter while holding everything else constant.This is expensive, but feasible since our parameter constraints are fairly tight.
+#'
 plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1, H = 0.05)) {
   post_samples <- rstan::extract(fit, pars=c("gamma", "mu", "H"))
   Xtk_samples <- rstan::extract(fit)$Xt_k
@@ -298,6 +311,19 @@ plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1
 # given a stanfit object, draws parameters from the posterior distributions and simulates fOU data.
 # the new fOU data is then aggregated to produce prediction confidence intervals.
 # this is an expensive computation.
+
+
+#' Make predictions using an fOU fit.
+#'
+#' Given a Stan fit object, it predicts the next n data points using the parameters' posterior distributions.
+#'
+#' @param fit Stan fit object of an fOU process.
+#' @param X0 Initial fOU value at time `t = 0`.
+#' @param delta_t Interobservation time between each observation of the fOU process.
+#' @param n_points Number of points to predict.
+#' @param n_samples Number of sample paths to simulate.
+#' @return Vector of n_points containing the predicted fOU points.
+#' @details Draws parameters from the posterior distributions and simulates fOU data. The new fOU data is then aggregated to produce prediction confidence intervals. This is an expensive computation.
 fOU_predict <- function(fit, X0, delta_t, n_points, n_samples) {
 
   # each row contains a sample path taken by the fitted fOU process
@@ -323,7 +349,20 @@ fOU_predict <- function(fit, X0, delta_t, n_points, n_samples) {
 }
 
 
-# given fOU_data, uses fOU_predict to generate confidence intervals, then plots n sample paths from the _true_ fOU parameters
+#' Plot prediction intervals.
+#'
+#' Given fOU_data, uses fOU_predict to generate confidence intervals, then plots n sample paths from the `true`` fOU parameters.
+#' @param fOU_data is a list of
+#' \describe{
+#'   \item{Xt}{Vector of observations at level k.}
+#'   \item{delta_t}{The interobservation time between each observation of the fOU process.}
+#'   \item{X0}{Initial fOU value at time `t = 0`.}
+#'   }
+#' @param fit Stan fit object of an fOU process.
+#' @param delta_t Interobservation time between each observation of the fOU process.
+#' @param n_points Number of points to predict.
+#' @param n_samples Number of sample paths to simulate.
+#' @return Plot of prediction intervals of each of the fOU parameters.
 plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples) {
   Xt <- tail(fOU_data$Xt, 20)
   N <- length(Xt)
@@ -345,7 +384,20 @@ plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples
   }
 }
 
-# given data and a stanfit object, plots Xt along with the computed missing data confidence intervals
+#' Plot confindence intervals.
+#'
+#' Given fOU_data, uses fOU_predict to generate confidence intervals, then plots n sample paths from the `true`` fOU parameters.
+#' @param fOU_data is a list of
+#' \describe{
+#'   \item{Xt}{Vector of observations at level k.}
+#'   \item{delta_t}{The interobservation time between each observation of the fOU process.}
+#'   \item{X0}{Initial fOU value at time `t = 0`.}
+#'   }
+#' @param fit Stan fit object of an fOU process.
+#' @param K The level of euler-approximation which is a positive number less than N.
+#' @param N Number of observations of the fOU process.
+#' @param title Title of the plot.
+#' @return Plot of confidence intervals of each of the fOU parameters.
 plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated points") {
   t_k <- (1 : (K * N)) / K
 
@@ -359,6 +411,13 @@ plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated
 }
 
 # given a tibble of posterior samples (from fit_fOU_process), calculate the
+
+#' Plot posterior distribution for parameters.
+#'
+#' Given a tibble of posterior samples (from fit_fOU_process), calculate the posterior distribution and plot them.
+#'
+#' @param post_tb Tibble of posterior samples.
+#' @return Plot of the posterior distribution of each parameter of the fOU process.
 plot_param_posterior_distributions <- function(post_tb) {
   p1 <- ggplot(data=post_tb) +
     geom_density(mapping=aes(x=H, group=K_factor, color = K_factor))
