@@ -171,15 +171,15 @@ fit_fOU_process <- function(fOU_data, K, iter = 2e3, control = list(adapt_delta 
 #'
 #' Fits an fOU process to the given data across multiple k-level approximations using a pre-compiled stan mode.
 #'
-#' @param Xt A vector of fOU observations.
+#' @param fOU_data fOU_data object returned by fOU_sim.
 #' @param Ks is vector of levels for the k-level approximations to be fitted.
 #' @return A list of `Ks` stanfit objects that is fitted to `c(X0,Xt)` for each level k.
 #' @export
-fit_fOU_multiple_K <- function(Xt, Ks) {
+fit_fOU_multiple_K <- function(fOU_data, Ks) {
   all_samples <- data.frame()
 
   fits <- sapply(Ks, function(K) {
-    fit_fOU_process(Xt, K)
+    fit_fOU_process(fOU_data, K)
   })
 
   for (i in 1:length(Ks)) {
@@ -189,7 +189,7 @@ fit_fOU_multiple_K <- function(Xt, Ks) {
     param_samples$K <- Ks[i]
     all_samples <- rbind(all_samples, param_samples)
   }
-  all_samples <- as_tibble(all_samples)
+  all_samples <- dplyr::as_tibble(all_samples)
   list(post_samples=all_samples, fits=fits)
 }
 
@@ -268,43 +268,37 @@ plot_likelihoods <- function(fOU_data, fit, K, thresholds=list(mu=0.1, gamma=0.1
   theta_hat <- list(gamma = gamma_hat, mu = mu_hat, H = H_hat)
   delta_t <- fOU_data$delta_t / K
 
-  print(theta_hat)
-  print(delta_t)
-
-  par(mfrow=c(2,3))
-
   # global checks
   range_H <- seq(0.0, 1, length.out = 1000)
   loglikelihoods <- sapply(range_H, function(H) { fou_logdens(Xtk_hat, delta_t, theta = list(mu=theta_hat$mu, gamma=theta_hat$gamma, H = H) )})
-  plot(range_H, loglikelihoods)
-  abline(v = theta_hat$H)
-
+  plot(range_H, loglikelihoods, xlab = "H", main = "Global L(H|Xt)")
+  abline(v = theta_hat$H, col = "red")
 
   range_gamma <- seq(0, 2, length.out = 1000)
   loglikelihoods <- sapply(range_gamma, function(gamma) { fou_logdens(Xtk_hat, delta_t, theta = list(mu=theta_hat$mu, gamma=gamma, H = theta_hat$H) )})
-  plot(range_gamma, loglikelihoods)
-  abline(v = theta_hat$gamma)
+  plot(range_gamma, loglikelihoods, xlab = "gamma", main = "Global L(gamma|Xt)")
+  abline(v = theta_hat$gamma, col = "red")
 
   range_mu <- seq(-5, 5, length.out = 1000)
   loglikelihoods <- sapply(range_mu, function(mu) { fou_logdens(fOU_data$Xt, delta_t, theta = list(mu=mu, gamma=theta_hat$gamma, H = theta_hat$H) )})
-  plot(range_mu, loglikelihoods)
-  abline(v = theta_hat$mu)
+  plot(range_mu, loglikelihoods, xlab = "mu", main = "Global L(mu|Xt)")
+  abline(v = theta_hat$mu, col = "red")
 
   # local checks
   range_H <- seq(theta_hat$H - thresholds$H, theta_hat$H + thresholds$H, length.out = 1000)
   loglikelihoods <- sapply(range_H, function(H) { fou_logdens(Xtk_hat, delta_t, theta = list(mu=theta_hat$mu, gamma=theta_hat$gamma, H = H) )})
-  plot(range_H, loglikelihoods)
-  abline(v = theta_hat$H)
+  plot(range_H, loglikelihoods, xlab = "H", main = "Local L(H|Xt)")
+  abline(v = theta_hat$H, col = "red")
 
   range_gamma <- seq(theta_hat$gamma - thresholds$gamma, theta_hat$gamma + thresholds$gamma, length.out = 1000)
   loglikelihoods <- sapply(range_gamma, function(gamma) { fou_logdens(Xtk_hat, delta_t, theta = list(mu=theta_hat$mu, gamma=gamma, H = theta_hat$H) )})
-  plot(range_gamma, loglikelihoods)
-  abline(v = theta_hat$gamma)
+  plot(range_gamma, loglikelihoods, xlab= "gamma", main = "Local L(gamma|Xt)")
+  abline(v = theta_hat$gamma, col = "red")
 
   range_mu <- seq(theta_hat$mu - thresholds$mu, theta_hat$mu + thresholds$mu, length.out = 1000)
   loglikelihoods <- sapply(range_mu, function(mu) { fou_logdens(fOU_data$Xt, delta_t, theta = list(mu=mu, gamma=theta_hat$gamma, H = theta_hat$H) )})
-  plot(range_mu, loglikelihoods)
-  abline(v = theta_hat$mu)
+  plot(range_mu, loglikelihoods, xlab = "mu", main = "Local L(mu|Xt)")
+  abline(v = theta_hat$mu, col = "red")
 }
 
 # given a stanfit object, predicts the next n data points using the parameters' posterior distributions
@@ -407,26 +401,29 @@ plot_CI <- function(fOU_data, fit, K, N, title = "Xt and 99% CIs of interpolated
   plot(NULL, xlim=c(0, N), ylim=c(min(fOU_data$Xt[1:N]), max(fOU_data$Xt[1:N])), xlab="time (t)", ylab="X(t)", main = title)
 
   polygon(c(t_k, rev(t_k)), c(CI_upper[1:(K * N)], rev(CI_lower[1:(K * N)])), col = "grey90", border = NA)
-  points(1:N, fOU_data$Xt[2:(N + 1)], col="black")
+    points(1:N, fOU_data$Xt[2:(N + 1)], col="black")
 }
-
-# given a tibble of posterior samples (from fit_fOU_process), calculate the
 
 #' Plot posterior distribution for parameters.
 #'
 #' Given a tibble of posterior samples (from fit_fOU_process), calculate the posterior distribution and plot them.
 #'
 #' @param post_tb Tibble of posterior samples.
+#' @param fOU_data data object returned by fOU_sim
 #' @return Plot of the posterior distribution of each parameter of the fOU process.
-plot_param_posterior_distributions <- function(post_tb) {
+plot_param_posterior_distributions <- function(post_tb, fOU_data) {
   p1 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=H, group=K_factor, color = K_factor))
+    geom_density(mapping=aes(x=H, group=K, color = K)) +
+    geom_vline(xintercept = fOU_data$theta$H)
 
   p2 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=gamma, group=K_factor, color = K_factor))
+    geom_density(mapping=aes(x=gamma, group=K, color = K)) +
+    geom_vline(xintercept = fOU_data$theta$gamma)
 
   p3 <- ggplot(data=post_tb) +
-    geom_density(mapping=aes(x=mu, group=K_factor, color = K_factor))
+    geom_density(mapping=aes(x=mu, group=K, color = K)) +
+    geom_vline(xintercept = fOU_data$theta$mu)
+
   grid.arrange(p1, p2, p3, nrow=3)
 }
 
