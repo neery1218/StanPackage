@@ -173,7 +173,7 @@ fit_fOU_process <- function(fOU_data, K, iter = 2e3, control = list(adapt_delta 
 #'
 #' @param Xt A vector of fOU observations.
 #' @param Ks is vector of levels for the k-level approximations to be fitted.
-#' @return A list of `Ks` stanfit objects that is fitted to `c(X0,Xt)` for each level k.
+#' @return A list of `Ks` samples and stanfit objects that are fitted to `c(X0,Xt)` for each level k.
 #' @export
 fit_fOU_multiple_K <- function(Xt, Ks) {
   all_samples <- data.frame()
@@ -360,8 +360,8 @@ fOU_predict <- function(fit, X0, delta_t, n_points, n_samples) {
 #'   }
 #' @param fit Stan fit object of an fOU process.
 #' @param delta_t Interobservation time between each observation of the fOU process.
-#' @param n_points Number of points to predict.
-#' @param n_samples Number of sample paths to simulate.
+#' @param n_points Number of predicted points.
+#' @param n_samples Number of sample paths to simulated.
 #' @return Plot of prediction intervals of each of the fOU parameters.
 plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples) {
   Xt <- tail(fOU_data$Xt, 20)
