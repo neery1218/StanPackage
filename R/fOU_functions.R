@@ -400,15 +400,18 @@ plot_prediction_interval <- function(fOU_data, fit, delta_t, n_points, n_samples
   Xt <- tail(fOU_data$Xt, 20)
   N <- length(Xt)
 
-  par(mfrow=c(1,1))
   plot(NULL, ylim=c(-20,20), xlim = c(1, N + n_points), xlab = "time (t)", ylab = "Xt", main = "Predictions with sample paths")
   points(1:N, Xt)
 
   pred_matrix <- fOU_predict(fOU_data, fit, tail(fOU_data$Xt, 1), delta_t, n_points - 1, n_samples)
-  CI <- apply(pred_matrix, 2, function(ts) { quantile(ts, probs = c(0.05, 0.95)) })
 
+
+  CI <- apply(pred_matrix, 2, function(ts) { quantile(ts, probs = c(0.05, 0.95)) })
   # 90% confidence interval
   polygon(c(N:(N + n_points - 1), rev(N:(N + n_points - 1))), c(CI[1,], rev(CI[2,])), col = "grey90", border = NA)
+
+  CI <- apply(pred_matrix, 2, function(ts) { quantile(ts, probs = c(0.25, 0.75)) })
+  polygon(c(N:(N + n_points - 1), rev(N:(N + n_points - 1))), c(CI[1,], rev(CI[2,])), col = "grey50", border = NA)
 }
 
 #' Plot confindence intervals.
