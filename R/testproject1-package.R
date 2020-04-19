@@ -7,6 +7,11 @@
 #' @aliases testproject1
 #' @useDynLib testproject1, .registration = TRUE
 #' @import methods
+#' @importFrom stats dnorm dunif  quantile toeplitz
+#' @importFrom utils tail
+#' @importFrom graphics abline plot points polygon
+#' @importFrom ggplot2 ggplot geom_density aes geom_vline
+#' @importFrom gridExtra grid.arrange
 #' @import Rcpp
 #' @importFrom rstan sampling
 #'
