@@ -96,6 +96,6 @@ test_that("fOU process log density, gradients ", {
   lpStan_grad = lpStan_grad_unconstrained[1:3, ] / ParsMat
 
   # gradients should be (almost) identical
-  expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-5) # default tolerance (1.5e-8) causes errors
+  expect_equal(lpR_grad, lpStan_grad, tolerance = 1e-6) # default tolerance (1.5e-8) causes errors
 })
 
