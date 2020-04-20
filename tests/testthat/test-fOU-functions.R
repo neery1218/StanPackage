@@ -96,7 +96,29 @@ test_that("getDgs", {
   expect_equal(dG, dGs_actual)
 })
 
+
+test_that("future_dgs", {
+  N <- 1
+  dGs_obs <- c(0)
+  theta <- list(mu=0, H=0.5)  # will produce an identity variance matrix.
+
+  # given the parameters, we're sampling from N(0, 1)
+  dGs_sample <- sapply(1:4e3, function(i) {get_dGs_future(dGs_obs, 1, theta, 1)})
+
+  # likelihood of normal distribution
+  obj_fun <- function(mu, sigma) {
+    sum(-(mu - dGs_sample)^2 / sigma^2) - length(dGs_sample)/2 * log(sigma^2)
+  }
+
+  # make sure mu=0, sigma=1 is more likely than (mu=1, sigma=1), (mu=0, sigma=5)
+  # this are very wide checks to make sure we don't get really unlucky.
+  expect_gt(obj_fun(0,1), obj_fun(2,1))
+  expect_gt(obj_fun(0,1), obj_fun(0,5))
+})
+
+
 # commented out because the test actually fits a stan model
+# can't test fOU_predict without a stanfit object.
 # test_that("fou_predict Predicting and Plotting",{
 #
 #   delta_t <- 1
