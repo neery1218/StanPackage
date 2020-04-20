@@ -319,7 +319,7 @@ get_dGs <- function(fOU_data, theta) {
 }
 
 #' Draws a dG_future sample from the distribution dG_future | dG_obs
-#' @param dG_obs observed dG values
+#' @param dGs_obs observed dG values
 #' @param n_points number of dG points to sample
 #' @param theta sampled parameters from the posterior distribution
 #' @param delta_t delta_t
@@ -409,10 +409,7 @@ fOU_predict <- function(fOU_data, fit, X0, delta_t, n_points, n_samples) {
 #'   \item{delta_t}{The interobservation time between each observation of the fOU process.}
 #'   \item{X0}{Initial fOU value at time `t = 0`.}
 #'   }
-#' @param fit Stan fit object of an fOU process.
-#' @param delta_t Interobservation time between each observation of the fOU process.
-#' @param n_points Number of points to predict.
-#' @param n_samples Number of sample paths to simulate.
+#' @param pred_matrix Predictions of Xt. Each row is a sample.
 #' @return Plot of prediction intervals of each of the fOU parameters.
 #' @export
 plot_prediction_interval <- function(fOU_data, pred_matrix) {

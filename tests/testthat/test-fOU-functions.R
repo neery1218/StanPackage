@@ -57,6 +57,27 @@ test_that("fou_logdens csde_logdens Log Density", {
 
 })
 
+# Prediction tests
+test_that("getDgs", {
+  # Simulate Xt, then verify the dGs returned by get_dGs is identical.
+  N <- 10
+  delta_t <- 1
+  theta <- list(mu=0, gamma=1, H=0.5)
+
+  dG <- rep(1, N)
+  Xt <- rep(NA, N + 1)
+
+  Xt[1] = 0
+  for (i in 1:N) {
+    Xt[i + 1] = Xt[i] + fou_mu(Xt[i], theta) * delta_t + dG[i]
+  }
+
+  fOU_data = list(X0=0, delta_t=delta_t, Xt=Xt, theta=theta)
+
+  dGs_actual <- testproject1::get_dGs(fOU_data, theta)
+  expect_equal(dG, dGs_actual)
+})
+
 # commented out because the test actually fits a stan model
 # test_that("fou_predict Predicting and Plotting",{
 #
