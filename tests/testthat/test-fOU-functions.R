@@ -16,16 +16,6 @@ test_that("fou_mu drift term ",{
   expect_equal(fou_mu(y_n, list(gamma=gamma, mu=mu, H=H)), -1.8)
 })
 
-test_that("fou_sigma Constant value test ", {
-
-  H <- 0.9
-  gamma <- 0.9
-  mu <- 1
-
-  expect_equal(fou_sigma(theta=list(gamma=gamma, mu=mu, H=H)),1)
-
-})
-
 
 test_that("fou_sim & csde_sim Simulate data ",{
 

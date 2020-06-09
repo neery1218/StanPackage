@@ -8,8 +8,8 @@ PKG_CPPFLAGS = -I"../inst/include" -I"$(STANHEADERS_SRC)" -DBOOST_DISABLE_ASSERT
 CXX_STD = CXX14
 
 # FFTW stuff
-PKG_CPPFLAGS+= -I/usr/local/include
-PKG_LIBS+= -L/usr/local/lib -lfftw3
+PKG_CPPFLAGS+= 
+PKG_LIBS+= -lfftw3
 
 
 all: $(SHLIB)

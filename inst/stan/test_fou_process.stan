@@ -50,7 +50,7 @@ parameters {
 
 
   // TODO: add sigma back in
-  // real<lower=0> sigma; ignore for now
+  real<lower=0> sigma;
 
   real Xt_k_fill[N * (K - 1)]; // k-level approximation filler values.
 }
@@ -86,7 +86,7 @@ transformed parameters {
   // can't write in one line because these are real arrays. I don't think there's any significant
   // performance hit though.
   for (i in 1:(N*K)) {
-    dG[i] = dX[i] - mus[i] * (delta_t / K);
+    dG[i] = (dX[i] - mus[i] * (delta_t / K)) / sigma;
   }
 }
 
@@ -94,6 +94,7 @@ model {
   H ~ uniform(0, 1); // not completely necessary, but it makes my unit testing easier. See definition of H above.
   gamma ~ uniform(0, 2);
   mu ~ normal(0, 10); // fairly wide,for simulation purposes. i was observing the mcmc sample values like 1e9 when our N was small (~50), so this helps our mcmc converge.
+  sigma ~ uniform(0, 10);
 
   // real normal_toeplitz(acf, mus)
   // dG ~ NormalToeplitz(0, toeplitz(acf))
@@ -107,5 +108,5 @@ model {
   */
   // included the jacobian transform, still getting the warning
   // sigma is permanently set to 1
-  target += ( -1 * N * log(1) );
+  target += ( -1 * N * K * log(sigma) );
 }

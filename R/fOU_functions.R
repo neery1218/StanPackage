@@ -48,23 +48,6 @@ fou_gamma <- function(theta, dt, n){
   gamma
 }
 
-#' Stochastic deviation for the fOU process.
-#'
-#' @param theta is a list with the parameters of the fOU process (where sigma is permanently 1):
-#' \describe{
-#'   \item{H}{Hurst index which is between 0 and 1.}
-#'   \item{mu`}{Mean of the fOU process which is positive.}
-#'   \item{gamma}{Mean reverting speed of the process which is positive.}
-#'   }
-#' @param dt is the interobservation time between each datapoint of the fOU process.
-#' @param N Number of observations of the fOU process.
-#' @return A real number.
-#' @details Maintained constant at 1 to simplify calculations.
-#' @export
-fou_sigma <- function(theta, dt, N) {
-  1
-}
-
 #' Generate cSDE observations.
 #'
 #' @param N Number of observations.
@@ -83,6 +66,7 @@ csde_sim <- function(N, dt, X0, theta,
   # dXt = X_{t-1} + mu_fun(X_{t-1}, theta) * dt + sigma * dG
 
   sig <- sigma_fun(theta) # diffusion
+  print(sig)
   gam <- gamma_fun(theta, dt, N) # autocorrelation
   dG <- SuperGauss::rnormtz(acf = gam, fft = fft) # noise increments
   Xt <- rep(NA, N+1) # cSDE time series
@@ -113,7 +97,7 @@ csde_sim <- function(N, dt, X0, theta,
 #' }
 #' @export
 fOU_sim <- function(N, theta, X0, delta_t) {
-  Xt <- csde_sim(N, delta_t, X0, theta, fou_mu, fou_sigma, fou_gamma)
+  Xt <- csde_sim(N, delta_t, X0, theta, fou_mu, function(theta) { theta$sigma }, fou_gamma)
   list(
     Xt = Xt,
     theta = theta,
@@ -235,10 +219,11 @@ csde_logdens <- function(Xt, dt, theta,
 #' @return A scalar containing the log-density of the fOU evaluated at its arguments.
 #' @export
 fou_logdens <- function(Xt, delta_t, theta) {
-  csde_logdens(Xt, delta_t, theta, fou_mu, fou_sigma, fou_gamma) +
+  csde_logdens(Xt, delta_t, theta, fou_mu, function(theta) { theta$sigma }, fou_gamma) +
     dunif(theta$H, 0, 1, log = TRUE) + # H ~ uniform(1)
     dunif(theta$gamma, 0, 2, log = TRUE) +
-    dnorm(theta$mu, 0, 10, log = TRUE)
+    dnorm(theta$mu, 0, 10, log = TRUE) +
+    dunif(theta$sigma, 0, 10, log=TRUE)
 }
 
 #' Plot likelihoods of fOU parameters.
@@ -312,7 +297,7 @@ get_dGs <- function(fOU_data, theta) {
   dX <- diff(Xt)
   N <- length(dX)
   mu <- fou_mu(Xt[1:N], theta) # drift
-  sig <- fou_sigma(theta) # diffusion
+  sig <- function() { theta$sigma } # diffusion
   gam <- fou_gamma(theta, fOU_data$delta_t, N) # autocorrelation
   dG <- (dX - mu * fOU_data$delta_t) / sig # noise increments
   dG
@@ -383,7 +368,7 @@ fOU_predict <- function(fOU_data, fit, X0, delta_t, n_points, n_samples) {
     dGs_future_matrix[i,] <- dGs_future
     dGs_obs_matrix[i,] <- dGs_obs
 
-    sig <- fou_sigma(theta, delta_t, n_points) # hardcoded to one
+    sig <- theta$sigma
 
     # construct Xt_future
     Xt_future <- rep(0, n_points+1) # cSDE time series
