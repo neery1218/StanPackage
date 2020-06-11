@@ -297,9 +297,8 @@ get_dGs <- function(fOU_data, theta) {
   dX <- diff(Xt)
   N <- length(dX)
   mu <- fou_mu(Xt[1:N], theta) # drift
-  sig <- function() { theta$sigma } # diffusion
   gam <- fou_gamma(theta, fOU_data$delta_t, N) # autocorrelation
-  dG <- (dX - mu * fOU_data$delta_t) / sig # noise increments
+  dG <- (dX - mu * fOU_data$delta_t) / theta$sigma # noise increments
   dG
 }
 

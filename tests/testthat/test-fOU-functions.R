@@ -24,10 +24,11 @@ test_that("fou_sim & csde_sim Simulate data ",{
   H <- 0.9
   X0 <- 3
   gamma <- 0.9
+  sigma <- 2
   mu <- 1
   K <- 3
 
-  data <- fOU_sim(N, list(gamma=gamma, mu=mu, H=H), X0, delta_t)
+  data <- fOU_sim(N, list(gamma=gamma, mu=mu, H=H, sigma=2), X0, delta_t)
   expect_equal(length(data$Xt), N+1)
 })
 
@@ -36,8 +37,7 @@ test_that("fou_logdens csde_logdens Log Density", {
   # Generating data
   N <- 10
   delta_t <- 1
-  theta <- list(mu=0, gamma=1, H=0.5)
-  sigma <-1
+  theta <- list(mu=0, gamma=1, H=0.5, sigma=1)
 
   dG <- rep(1, N)
   Xt <- rep(NA, N + 1)
@@ -50,17 +50,17 @@ test_that("fou_logdens csde_logdens Log Density", {
   #calculating log likelihood
   dX <- diff(Xt)
   mu <- fou_mu(Xt[1:N], theta)
-  dG <- (dX - mu * delta_t) / sigma
+  dG <- (dX - mu * delta_t) / theta$sigma
   NTz <- SuperGauss::NormalToeplitz$new(N)
   ld <- NTz$logdens(dG, acf = fou_gamma(theta=theta,1, N))
-  ld <- ld - N * log(sigma)
+  ld <- ld - N * log(theta$sigma)
 
   #adding priors
-  ld <- ld + dunif(theta$H, 0, 1, log = TRUE) + dunif(theta$gamma, 0, 2, log = TRUE) + dnorm(theta$mu, 0, 10, log = TRUE)
+  ld <- ld + dunif(theta$H, 0, 1, log = TRUE) + dunif(theta$gamma, 0, 2, log = TRUE) + dnorm(theta$mu, 0, 10, log = TRUE) + dunif(theta$sigma, 0, 10, log = TRUE)
 
 
   #comparing against function
-  ld_fou <- fou_logdens(Xt, delta_t, list(gamma=theta$gamma, mu=theta$mu, H=theta$H))
+  ld_fou <- fou_logdens(Xt, delta_t, theta)
   expect_equal(ld, ld_fou)
 
 })
@@ -70,7 +70,7 @@ test_that("getDgs", {
   # Simulate Xt, then verify the dGs returned by get_dGs is identical.
   N <- 10
   delta_t <- 1
-  theta <- list(mu=0, gamma=1, H=0.5)
+  theta <- list(mu=0, gamma=1, H=0.5, sigma=1)
 
   dG <- rep(1, N)
   Xt <- rep(NA, N + 1)

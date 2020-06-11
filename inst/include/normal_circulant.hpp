@@ -1,13 +1,13 @@
 #pragma once
 
 //[[Rcpp::depends("SuperGauss")]]
-#include "SuperGauss/NormalToeplitz.h"
+#include "SuperGauss/NormalCirculant.h"
 #include "helpers.hpp"
 #include <iostream>
 #include <vector>
 
 template <typename Ty__, typename Tacf__, typename Tmu__>
-stan::math::var normal_toeplitz_lpdfi(const std::vector<Ty__>& y,
+stan::math::var normal_circulant_lpdfi(const std::vector<Ty__>& y,
     const std::vector<Tacf__>& acf, const std::vector<Tmu__>& mu, std::ostream* pstream__)
 {
   using stan::math::operands_and_partials;
@@ -36,7 +36,8 @@ stan::math::var normal_toeplitz_lpdfi(const std::vector<Ty__>& y,
   }
 
   // solve for log-posterior
-  NormalToeplitz solver(N);
+  NormalCirculant solver(2*N - 2);
+
   double lp = solver.logdens(z_.data(), acf_.data());
 
   // get gradients
@@ -70,12 +71,11 @@ stan::math::var normal_toeplitz_lpdfi(const std::vector<Ty__>& y,
   return o.build(lp);
 }
 
-
 template <bool propto, typename T0__, typename T1__, typename T2__>
 typename boost::math::tools::promote_args<T0__, T1__, T2__>::type
-normal_toeplitz_lpdf(const std::vector<T0__>& y,
+normal_circulant_lpdf(const std::vector<T0__>& y,
     const std::vector<T1__>& acf, const std::vector<T2__>& mu, std::ostream* pstream__)
 {
-  stan::math::var v = normal_toeplitz_lpdfi(y, acf, mu, pstream__);
+  stan::math::var v = normal_circulant_lpdfi(y, acf, mu, pstream__);
   return cast<typename boost::math::tools::promote_args<T0__, T1__, T2__>::type>(v);
 }
