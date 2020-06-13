@@ -646,18 +646,32 @@ test_that("normal_toeplitz log density, gradients wrt everything", {
   expect_equal(lpR_grad, lpStan_grad) # default tolerance (1.5e-8) causes errors
 })
 
+
 test_that("circulant matrix log density, gradients wrt everything", {
   # generate data
-  N <- 3
+  N <- 10
   max_lambda <- 100
   max_sigma <- 1
-  lambda <- runif(1, 0, max_lambda)
-  rho <- 1
-  sigma <- runif(1, 0, max_sigma)
-  toep <- toeplitz(pex_acf(1:N, lambda, 1, sigma))
-  mu <- rep(runif(1, 0, 10), N)
-  y <- rmvnorm(1,mu, toep)[1,]
-  data = list(N=N, y_dat=y, mu_dat=mu, type=4, lambda_dat=lambda, sigma_dat=sigma) # gradient wrt lambda, sigma
+  data <- list(N=N) # gradient wrt lambda, sigma
+
+  # copied from SuperGauss
+  unfold_acf <- function(N, uacf) {
+    n <- length(uacf)
+    if(n != floor(N/2) + 1) stop("uacf has wrong length.")
+    acf <- rep(NA, N)
+    acf[1:n] <- uacf
+    if(N > 1) {
+      eN <- (2*n) == (N+2)
+      id <- n - eN + (2:n-1)
+      acf[n - eN + (2:n-1)] <- uacf[n:2]
+    }
+    acf
+  }
+
+  circ_ldens <- function(z, nu, mu) {
+    mvtnorm::dmvnorm(z, log = TRUE, mean = mu,
+                     sigma = toeplitz(unfold_acf(length(z), nu)))
+  }
 
   # log posterior function
   toep_logpost <- function(y, lambda, sigma, mu) {
@@ -665,11 +679,15 @@ test_that("circulant matrix log density, gradients wrt everything", {
       dunif(max_sigma, min=0, max=1, log=TRUE)
 
     N <- length(y)
-    llikelihood <- dmvnorm(y, mean = mu, sigma = toeplitz(pex_acf(1:N, lambda, 1, sigma)), log = TRUE)
+    Nu <- floor(N / 2) + 1
+
+    acf <- pex_acf(1:Nu, lambda, 1, sigma)
+    llikelihood <- circ_ldens(y, acf, mu)
+
     lprior + llikelihood
   }
 
-  fit <- rstan::sampling(stanmodels$test_normal_toeplitz, data = data,
+  fit <- rstan::sampling(stanmodels$test_normal_circulant, data = data,
                          iter = 1, chains = 1, algorithm = "Fixed_param")
 
   # generate values of the parameters in the model
@@ -680,7 +698,7 @@ test_that("circulant matrix log density, gradients wrt everything", {
                         lambda = runif(1, 0, max_lambda),
                         sigma = runif(1, 0, max_sigma),
                         mu = rep(runif(1, 0, 10), N),
-                        y = rmvnorm(1, rep(runif(1,0,10), N), toep)[1,]
+                        y = rnorm(N)
                         )
                     },
                     simplify = FALSE)
@@ -693,6 +711,7 @@ test_that("circulant matrix log density, gradients wrt everything", {
     mu <- Pars[[ii]]$mu
     toep_logpost(y, lambda, sigma, mu)
   })
+
   # log posterior calculations in Stan
   lpStan <- sapply(1:nsim, function(ii) {
     upars <- rstan::unconstrain_pars(object = fit, pars = Pars[[ii]])
@@ -703,7 +722,7 @@ test_that("circulant matrix log density, gradients wrt everything", {
 
   # differences should be identical
   lp_diff <- lpR - lpStan
-  expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)))
+  expect_equal(lp_diff, rep(lp_diff[1], length(lp_diff)), tolerance = 1e-5)
 
   # gradients wrt lambda, sigma
   lpR_grad <- sapply(1:nsim, function(ii) {
@@ -727,7 +746,7 @@ test_that("circulant matrix log density, gradients wrt everything", {
   })
   ParsMat <- sapply(1:nsim, function(ii) {
     # divide y, mu by one because it's not constrained
-    c(rep(1, length(y)), Pars[[ii]]$lambda, Pars[[ii]]$sigma, rep(1, length(mu)))
+    c(rep(1, N), Pars[[ii]]$lambda, Pars[[ii]]$sigma, rep(1, N))
   })
 
   # divide gradient by lambda, sigma values to get gradients on the correct scale

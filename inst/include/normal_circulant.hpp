@@ -36,7 +36,7 @@ stan::math::var normal_circulant_lpdfi(const std::vector<Ty__>& y,
   }
 
   // solve for log-posterior
-  NormalCirculant solver(2*N - 2);
+  NormalCirculant solver(N);
 
   double lp = solver.logdens(z_.data(), acf_.data());
 

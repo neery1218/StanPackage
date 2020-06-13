@@ -3,6 +3,7 @@
 export(csde_logdens)
 export(csde_sim)
 export(fOU_predict)
+export(stanmodels)
 export(fOU_sim)
 export(fit_fOU_multiple_K)
 export(fit_fOU_process)
