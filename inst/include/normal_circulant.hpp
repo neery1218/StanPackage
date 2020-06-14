@@ -6,6 +6,14 @@
 #include <iostream>
 #include <vector>
 
+void print_vector(const vector<double> &v) {
+  for (int i = 0; i < v.size(); ++i) {
+    std::cout << v[i] << " ";
+  }
+  std::cout << std::endl;
+  return;
+}
+
 template <typename Ty__, typename Tacf__, typename Tmu__>
 stan::math::var normal_circulant_lpdfi(const std::vector<Ty__>& y,
     const std::vector<Tacf__>& acf, const std::vector<Tmu__>& mu, std::ostream* pstream__)
@@ -39,6 +47,15 @@ stan::math::var normal_circulant_lpdfi(const std::vector<Ty__>& y,
   NormalCirculant solver(N);
 
   double lp = solver.logdens(z_.data(), acf_.data());
+  /*
+  std::cout << "acf: ";
+  print_vector(acf_);
+  std::cout << "mu: ";
+  print_vector(mu_);
+  std::cout << "y: ";
+  print_vector(y_);
+  std::cout << "log density:" << lp << std::endl;
+  */
 
   // get gradients
   vector<double> dldz(N, 0.0);

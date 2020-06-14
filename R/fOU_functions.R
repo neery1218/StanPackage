@@ -205,7 +205,6 @@ csde_logdens <- function(Xt, dt, theta,
   ld - N * log(sig) # jacobian for change-of-variables dX <-> dG
 }
 
-
 #' Log-density of fOU observations.
 #'
 #' @param Xt A vector of fOU observations.
